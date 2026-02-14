@@ -13,7 +13,7 @@ module Database =
 
     let private membersFile = Path.Combine(dataDir, "members.json")
     let private attendanceFile = Path.Combine(dataDir, "attendance.json")
-    let private settingsFile = Path.Combine(dataDir, "settings.json")
+
 
     let private lockObj = obj ()
 
@@ -123,9 +123,3 @@ module Database =
         |> List.map (fun m -> m.Id)
         |> Set.ofList
 
-    // Settings
-    let getSmtpSettings () : SmtpSettings =
-        readFile settingsFile Domain.defaultSmtpSettings
-
-    let saveSmtpSettings (settings: SmtpSettings) =
-        writeFile settingsFile settings

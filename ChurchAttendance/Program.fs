@@ -77,12 +77,5 @@ let main args =
 
     mapPost "/reports/export" (fun ctx -> Handlers.exportPdf ctx)
 
-    mapPost "/reports/email" (fun ctx -> Handlers.emailReport ctx)
-
-    // Settings
-    mapGet "/settings" Handlers.settingsPage
-
-    mapPost "/settings/smtp" (fun ctx -> Handlers.saveSmtpSettings ctx)
-
     app.Run()
     0

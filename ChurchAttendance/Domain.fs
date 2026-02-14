@@ -39,15 +39,6 @@ type AttendanceRecord =
       ServiceType: ServiceType
       MemberIds: Guid list }
 
-type SmtpSettings =
-    { Host: string
-      Port: int
-      Username: string
-      Password: string
-      FromEmail: string
-      ToEmail: string
-      UseSsl: bool }
-
 module Domain =
 
     let ageGroupLabel =
@@ -114,11 +105,3 @@ module Domain =
         | Some firstDate -> firstDate.Date = date.Date
         | None -> false
 
-    let defaultSmtpSettings =
-        { Host = ""
-          Port = 587
-          Username = ""
-          Password = ""
-          FromEmail = ""
-          ToEmail = ""
-          UseSsl = true }

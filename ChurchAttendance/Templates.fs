@@ -28,7 +28,6 @@ module Templates =
             <li><a href="/members" class="{if activeNav = "members" then "active" else ""}">Members</a></li>
             <li><a href="/attendance" class="{if activeNav = "attendance" then "active" else ""}">Attendance</a></li>
             <li><a href="/reports" class="{if activeNav = "reports" then "active" else ""}">Reports</a></li>
-            <li><a href="/settings" class="{if activeNav = "settings" then "active" else ""}">Settings</a></li>
         </ul>
     </nav>
     <main class="container">
@@ -438,60 +437,9 @@ module Templates =
             <button type="submit" id="export-pdf-btn">Download PDF</button>
         </form>
         <button type="button" class="secondary" id="share-pdf-btn" onclick="sharePdf()">Share PDF</button>
-        <form hx-post="/reports/email" hx-target="#report-status" hx-swap="innerHTML">
-            <input type="hidden" name="startDate" class="report-start-date" value="{weekAgo}">
-            <input type="hidden" name="endDate" class="report-end-date" value="{today}">
-            <button type="submit" class="outline">Email Report</button>
-        </form>
     </div>
     <div id="report-status"></div>
 </article>"""
 
         layout "Reports" "reports" content
 
-    let settingsPage (settings: SmtpSettings) =
-        let sslChecked =
-            if settings.UseSsl then
-                " checked"
-            else
-                ""
-
-        let content =
-            $"""<h1>Settings</h1>
-<article>
-    <header><h3>SMTP Email Settings</h3></header>
-    <form hx-post="/settings/smtp" hx-target="#settings-status" hx-swap="innerHTML">
-        <div class="grid">
-            <label for="host">SMTP Host
-                <input type="text" id="host" name="host" value="{htmlEncode settings.Host}" placeholder="smtp.gmail.com" required>
-            </label>
-            <label for="port">Port
-                <input type="number" id="port" name="port" value="{settings.Port}" required>
-            </label>
-        </div>
-        <div class="grid">
-            <label for="username">Username
-                <input type="text" id="username" name="username" value="{htmlEncode settings.Username}" required>
-            </label>
-            <label for="password">Password
-                <input type="password" id="password" name="password" value="{htmlEncode settings.Password}" required>
-            </label>
-        </div>
-        <div class="grid">
-            <label for="fromEmail">From Email
-                <input type="email" id="fromEmail" name="fromEmail" value="{htmlEncode settings.FromEmail}" required>
-            </label>
-            <label for="toEmail">To Email
-                <input type="email" id="toEmail" name="toEmail" value="{htmlEncode settings.ToEmail}" required>
-            </label>
-        </div>
-        <label>
-            <input type="checkbox" name="useSsl" value="true"{sslChecked}>
-            Use SSL/TLS
-        </label>
-        <button type="submit">Save Settings</button>
-    </form>
-    <div id="settings-status"></div>
-</article>"""
-
-        layout "Settings" "settings" content
