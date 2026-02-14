@@ -39,33 +39,27 @@ document.addEventListener('htmx:afterOnLoad', function(event) {
     }
 });
 
-// Update attendance counter display
+// Update attendance counter display (compact checklist version)
 function updateAttendanceCount() {
-    var counterDiv = document.getElementById('attendance-count');
-    if (!counterDiv) return;
+    var topBarCount = document.getElementById('top-bar-count');
+    if (!topBarCount) return;
 
-    var allCheckboxes = document.querySelectorAll('input[name="memberIds"]');
     var totalChecked = 0;
-    var visibleChecked = 0;
 
-    allCheckboxes.forEach(function(cb) {
-        var row = cb.closest('tr[data-age-group]');
-        if (cb.checked) {
-            totalChecked++;
-            if (row && row.style.display !== 'none') {
-                visibleChecked++;
-            }
-        }
+    // Update per-section counts
+    var sections = document.querySelectorAll('.age-group-section');
+    sections.forEach(function(section) {
+        var checkboxes = section.querySelectorAll('input[name="memberIds"]');
+        var checked = 0;
+        checkboxes.forEach(function(cb) { if (cb.checked) checked++; });
+        totalChecked += checked;
+
+        var countSpan = section.querySelector('.section-checked');
+        if (countSpan) countSpan.textContent = checked;
     });
 
-    var ageSelect = document.getElementById('age-group-filter');
-    var isFiltered = ageSelect && ageSelect.value !== '';
-
-    if (isFiltered) {
-        counterDiv.innerHTML = '<strong>' + visibleChecked + ' present</strong> <span class="secondary-count">(' + totalChecked + ' total)</span>';
-    } else {
-        counterDiv.innerHTML = '<strong>' + totalChecked + ' present</strong>';
-    }
+    // Update top bar total
+    topBarCount.textContent = totalChecked + ' present';
 }
 
 // Apply name and age group filters on the members page
@@ -82,19 +76,23 @@ function filterMemberRows() {
     });
 }
 
-// Apply both name and age group filters together
+// Filter attendance rows by name (compact checklist version)
 function filterAttendanceRows() {
-    var ageSelect = document.getElementById('age-group-filter');
     var nameInput = document.getElementById('name-filter');
-    var ageValue = ageSelect ? ageSelect.value : '';
     var nameValue = nameInput ? nameInput.value.toLowerCase() : '';
-    var rows = document.querySelectorAll('tr[data-age-group]');
-    rows.forEach(function (row) {
-        var matchesAge = !ageValue || row.getAttribute('data-age-group') === ageValue;
-        var matchesName = !nameValue || row.getAttribute('data-name').indexOf(nameValue) !== -1;
-        row.style.display = (matchesAge && matchesName) ? '' : 'none';
+
+    var sections = document.querySelectorAll('.age-group-section');
+    sections.forEach(function(section) {
+        var rows = section.querySelectorAll('.attendance-row');
+        var visibleCount = 0;
+        rows.forEach(function(row) {
+            var matchesName = !nameValue || row.getAttribute('data-name').indexOf(nameValue) !== -1;
+            row.style.display = matchesName ? '' : 'none';
+            if (matchesName) visibleCount++;
+        });
+        // Hide entire section if no visible members
+        section.style.display = visibleCount > 0 ? '' : 'none';
     });
-    updateAttendanceCount();
 }
 
 // Auto-save attendance on checkbox change
@@ -110,29 +108,12 @@ function autoSaveAttendance() {
         .catch(function () { if (status) status.innerHTML = '<span class="status-msg error" style="padding:0.3rem 0.6rem;font-size:0.85rem">Save failed</span>'; });
 }
 
-// Select-all checkbox for attendance (only toggles visible rows)
+// Attendance and member page change events
 document.addEventListener('change', function (e) {
-    if (e.target && e.target.id === 'select-all') {
-        var rows = document.querySelectorAll('tr[data-age-group]');
-        rows.forEach(function (row) {
-            if (row.style.display !== 'none') {
-                var cb = row.querySelector('input[name="memberIds"]');
-                if (cb) cb.checked = e.target.checked;
-            }
-        });
-        updateAttendanceCount();
-        autoSaveAttendance();
-    }
-
     // Auto-save on individual checkbox toggle
     if (e.target && e.target.name === 'memberIds') {
         updateAttendanceCount();
         autoSaveAttendance();
-    }
-
-    // Age group filter (attendance page)
-    if (e.target && e.target.id === 'age-group-filter') {
-        filterAttendanceRows();
     }
 
     // Age group filter (members page)
@@ -346,4 +327,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Share button is always visible - sharePdf() will handle unsupported devices
+});
+
+// Collapsible age group sections
+document.addEventListener('click', function(e) {
+    var header = e.target.closest('.age-group-header');
+    if (header) {
+        var section = header.closest('.age-group-section');
+        if (section) section.classList.toggle('collapsed');
+    }
+});
+
+// Search toggle for compact attendance checklist
+document.addEventListener('click', function(e) {
+    if (e.target && (e.target.id === 'search-toggle' || e.target.closest('#search-toggle'))) {
+        var topBar = document.getElementById('attendance-top-bar');
+        if (topBar) {
+            topBar.classList.add('searching');
+            var input = document.getElementById('name-filter');
+            if (input) input.focus();
+        }
+    }
+    if (e.target && (e.target.id === 'search-close' || e.target.closest('#search-close'))) {
+        var topBar = document.getElementById('attendance-top-bar');
+        if (topBar) {
+            topBar.classList.remove('searching');
+            var input = document.getElementById('name-filter');
+            if (input) {
+                input.value = '';
+                filterAttendanceRows();
+            }
+        }
+    }
 });

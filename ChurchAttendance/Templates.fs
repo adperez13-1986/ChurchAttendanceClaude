@@ -15,7 +15,7 @@ module Templates =
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{htmlEncode title} - Church Attendance</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/app.css?v=4">
+    <link rel="stylesheet" href="/css/app.css?v=6">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
@@ -258,81 +258,86 @@ module Templates =
         (serviceLabel: string)
         (isToday: bool)
         (checkedIds: Set<Guid>)
-        (firstTimerIds: Set<Guid>)
+        (_firstTimerIds: Set<Guid>)
         =
-        let memberRow (m: ChurchAttendance.Member) =
-            let isChecked =
-                if checkedIds.Contains m.Id then
-                    " checked"
-                else
-                    ""
-
-            let ageLabel = Domain.ageGroupLabel m.AgeGroup
-
-            let firstTimerBadge =
-                if firstTimerIds.Contains m.Id && checkedIds.Contains m.Id then
-                    " <mark>First Timer</mark>"
-                else
-                    ""
-
-            $"""<tr data-age-group="{ageLabel}" data-name="{htmlEncode (m.FullName.ToLowerInvariant())}">
-    <td><input type="checkbox" name="memberIds" value="{m.Id}"{isChecked}></td>
-    <td>{htmlEncode m.FullName}{firstTimerBadge}</td>
-    <td>{ageLabel}</td>
-    <td>{Domain.categoryLabel m.Category}</td>
-</tr>"""
-
-        let rows =
+        let activeMembers =
             members
             |> List.filter (fun m -> m.IsActive)
-            |> List.sortBy (fun m -> m.FullName)
-            |> List.map memberRow
-            |> String.concat "\n"
 
-        let ageGroupFilterOptions =
+        let abbreviatedLabel =
+            match serviceLabel with
+            | "Sunday Service" -> "Sun Service"
+            | "Prayer Meeting" -> "Prayer Mtg"
+            | s -> s
+
+        let parsedDate =
+            match DateTime.TryParse(date) with
+            | true, d -> d.ToString("MMM d")
+            | _ -> date
+
+        let renderMemberRow (m: ChurchAttendance.Member) =
+            let isChecked = if checkedIds.Contains m.Id then " checked" else ""
+            let nameAttr = htmlEncode (m.FullName.ToLowerInvariant())
+            let nameText = htmlEncode m.FullName
+            $"""<label class="attendance-row" data-name="{nameAttr}">
+            <input type="checkbox" name="memberIds" value="{m.Id}"{isChecked}> {nameText}
+        </label>"""
+
+        let renderSection (label: string) (checkedCount: int) (total: int) (memberRows: string) =
+            $"""<div class="age-group-section collapsed" data-age-group="{label}">
+        <div class="age-group-header"><span class="section-toggle">&#9654;</span> {label} (<span class="section-checked">{checkedCount}</span>/{total})</div>
+        <div class="age-group-body">
+        {memberRows}
+        </div>
+    </div>"""
+
+        let ageGroupSections =
             Domain.allAgeGroups
-            |> List.map (fun ag ->
-                let label = Domain.ageGroupLabel ag
-                $"""<option value="{label}">{label}</option>""")
+            |> List.choose (fun ag ->
+                let groupMembers =
+                    activeMembers
+                    |> List.filter (fun m -> m.AgeGroup = ag)
+                    |> List.sortBy (fun m -> m.FullName)
+
+                if groupMembers.IsEmpty then
+                    None
+                else
+                    let label = Domain.ageGroupLabel ag
+                    let total = groupMembers.Length
+                    let checkedCount = groupMembers |> List.filter (fun m -> checkedIds.Contains m.Id) |> List.length
+                    let memberRows = groupMembers |> List.map renderMemberRow |> String.concat "\n"
+                    Some (renderSection label checkedCount total memberRows))
             |> String.concat "\n"
 
-        let bannerClass = if isToday then "date-banner today" else "date-banner past-date"
-        let bannerExtra = if isToday then "" else " (not today)"
+        let totalChecked = activeMembers |> List.filter (fun m -> checkedIds.Contains m.Id) |> List.length
 
-        let formHtml =
-            $"""<div id="attendance-count" class="attendance-counter">
-        <strong>0 present</strong>
-    </div>
-    <div class="grid">
-        <label for="name-filter">Search by Name
-            <input type="search" id="name-filter" placeholder="Type a name...">
-        </label>
-        <label for="age-group-filter">Filter by Age Group
-            <select id="age-group-filter">
-                <option value="">All</option>
-                {ageGroupFilterOptions}
-            </select>
-        </label>
-    </div>
-    <table role="grid">
-        <thead>
-            <tr>
-                <th><input type="checkbox" id="select-all"></th>
-                <th>Name</th>
-                <th>Age Group</th>
-                <th>Category</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows}
-        </tbody>
-    </table>
-    <div class="grid">
+        let topBar =
+            $"""<div class="attendance-top-bar" id="attendance-top-bar">
+        <div class="top-bar-info">
+            <span class="top-bar-label">{htmlEncode abbreviatedLabel} &middot; {htmlEncode parsedDate}</span>
+            <span class="top-bar-count" id="top-bar-count">{totalChecked} present</span>
+        </div>
+        <button type="button" class="top-bar-search-btn" id="search-toggle" aria-label="Search">&#128269;</button>
+        <div class="top-bar-search" id="top-bar-search">
+            <input type="search" id="name-filter" placeholder="Search name..." autofocus>
+            <button type="button" class="top-bar-search-close" id="search-close" aria-label="Close search">&times;</button>
+        </div>
+    </div>"""
+
+        let bottomBar =
+            $"""<div class="attendance-bottom-bar">
         <span id="auto-save-status"></span>
-        <button type="submit">View Summary</button>
-        <button type="button" class="secondary" onclick="shareAttendancePdf()">Share PDF</button>
+        <div class="bottom-bar-actions">
+            <button type="submit">View Summary</button>
+            <button type="button" class="secondary" onclick="shareAttendancePdf()">Share PDF</button>
+        </div>
     </div>
     <div id="attendance-pdf-status"></div>"""
+
+        let formHtml =
+            $"""{topBar}
+    {ageGroupSections}
+    {bottomBar}"""
 
         let confirmHtml =
             if isToday then
@@ -346,10 +351,7 @@ module Templates =
     {formHtml}
 </div>"""
 
-        $"""<div class="{bannerClass}">
-    {htmlEncode serviceLabel} &mdash; {htmlEncode date}{bannerExtra}
-</div>
-<form hx-post="/attendance" hx-target="#attendance-area" hx-swap="innerHTML">
+        $"""<form hx-post="/attendance" hx-target="#attendance-area" hx-swap="innerHTML">
     <input type="hidden" name="date" value="{htmlEncode date}">
     <input type="hidden" name="serviceType" value="{htmlEncode serviceType}">
     {confirmHtml}
