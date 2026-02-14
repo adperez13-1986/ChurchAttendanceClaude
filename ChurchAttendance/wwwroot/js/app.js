@@ -98,8 +98,14 @@ function filterAttendanceRows() {
             row.style.display = matchesName ? '' : 'none';
             if (matchesName) visibleCount++;
         });
-        // Hide entire section if no visible members
-        section.style.display = visibleCount > 0 ? '' : 'none';
+        // Hide section if no matches, expand if searching and has matches
+        if (nameValue) {
+            section.style.display = visibleCount > 0 ? '' : 'none';
+            if (visibleCount > 0) section.classList.remove('collapsed');
+        } else {
+            section.style.display = '';
+            section.classList.add('collapsed');
+        }
     });
 }
 
