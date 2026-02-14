@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ChurchAttendance.BddTests/ChurchAttendance.BddTests.fsproj" />
+  <Project Path="ChurchAttendance.PlaywrightTests/ChurchAttendance.PlaywrightTests.csproj" />
+  <Project Path="ChurchAttendance/ChurchAttendance.fsproj" />
+</Solution>

@@ -1,0 +1,29 @@
+# Build outputs
+bin/
+obj/
+
+# Certificates and keys
+**/certs/*.pem
+**/certs/*.pfx
+**/certs/openssl.cnf
+
+# User / IDE files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Claude Code
+.claude/
