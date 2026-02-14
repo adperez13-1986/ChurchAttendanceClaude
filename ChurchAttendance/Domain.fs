@@ -15,6 +15,7 @@ type AgeGroup =
 [<JsonFSharpConverter>]
 type Category =
     | Member
+    | Attendee
     | Visitor
     | UnderMonitoring
 
@@ -71,12 +72,14 @@ module Domain =
     let categoryLabel =
         function
         | Member -> "Member"
+        | Attendee -> "Attendee"
         | Visitor -> "Visitor"
         | UnderMonitoring -> "Under Monitoring"
 
     let parseCategory =
         function
         | "Member" -> Some Member
+        | "Attendee" -> Some Attendee
         | "Visitor" -> Some Visitor
         | "UnderMonitoring" -> Some UnderMonitoring
         | _ -> None
@@ -95,7 +98,7 @@ module Domain =
     let allServiceTypes = [ SundayService; PrayerMeeting ]
 
     let allAgeGroups = [ Men; Women; YAN; CYN; Children; Infants ]
-    let allCategories = [ Member; Visitor; UnderMonitoring ]
+    let allCategories = [ Member; Attendee; UnderMonitoring; Visitor ]
 
     let newMember name ageGroup category firstAttendedDate =
         { Id = Guid.NewGuid()

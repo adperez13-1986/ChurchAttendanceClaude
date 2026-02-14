@@ -72,6 +72,7 @@ module Templates =
             let label =
                 match c with
                 | Member -> "Member"
+                | Attendee -> "Attendee"
                 | Visitor -> "Visitor"
                 | UnderMonitoring -> "UnderMonitoring"
 
@@ -106,6 +107,7 @@ module Templates =
             |> Option.map (fun x ->
                 match x.Category with
                 | Member -> "Member"
+                | Attendee -> "Attendee"
                 | Visitor -> "Visitor"
                 | UnderMonitoring -> "UnderMonitoring")
             |> Option.defaultValue "Member"
