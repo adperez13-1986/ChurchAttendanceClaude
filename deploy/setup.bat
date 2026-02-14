@@ -40,9 +40,14 @@ if %errorlevel% neq 0 (
 )
 echo       Done.
 
-:: 2. Create data directory
-echo [2/5] Creating data directory at %DATA_DIR%...
+:: 2. Create data directory and seed data if empty
+echo [2/5] Setting up data directory at %DATA_DIR%...
 if not exist "%DATA_DIR%" mkdir "%DATA_DIR%"
+if exist "%~dp0data\*.json" if not exist "%DATA_DIR%\members.json" (
+    xcopy /Y "%~dp0data\*.json" "%DATA_DIR%\" >nul
+    echo       Copied seed data.
+)
+if exist "%DATA_DIR%\members.json" echo       Data already present.
 echo       Done.
 
 :: 3. Generate self-signed HTTPS certificate
@@ -52,8 +57,7 @@ if not exist "%CERT_DIR%" mkdir "%CERT_DIR%"
 powershell -ExecutionPolicy Bypass -Command ^
   "$hostname = $env:COMPUTERNAME;" ^
   "$cert = New-SelfSignedCertificate" ^
-    " -DnsName 'localhost', $hostname, \"$hostname.local\", '*.local'" ^
-    " -IPAddress ([System.Net.IPAddress]::Parse('127.0.0.1')), ([System.Net.IPAddress]::Parse('::1'))" ^
+    " -DnsName 'localhost', '127.0.0.1', '::1', $hostname, \"$hostname.local\", '*.local'" ^
     " -CertStoreLocation 'Cert:\LocalMachine\My'" ^
     " -FriendlyName 'Church Attendance HTTPS'" ^
     " -NotAfter (Get-Date).AddYears(10);" ^

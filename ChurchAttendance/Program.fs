@@ -15,17 +15,16 @@ let main args =
 
     let builder = WebApplication.CreateBuilder(args)
 
-    // Configure Kestrel for both HTTP and HTTPS
+    // Configure Kestrel for HTTP (and HTTPS if cert exists)
+    let certPath = Path.Combine(AppContext.BaseDirectory, "certs", "certificate.pfx")
     builder.WebHost.ConfigureKestrel(fun options ->
-        // HTTP endpoint for backwards compatibility
         options.ListenAnyIP(5050, fun listenOptions ->
             listenOptions.Protocols <- HttpProtocols.Http1AndHttp2)
 
-        // HTTPS endpoint
-        options.ListenAnyIP(5051, fun listenOptions ->
-            listenOptions.Protocols <- HttpProtocols.Http1AndHttp2
-            let certPath = Path.Combine(AppContext.BaseDirectory, "certs", "certificate.pfx")
-            listenOptions.UseHttps(certPath) |> ignore)
+        if File.Exists(certPath) then
+            options.ListenAnyIP(5051, fun listenOptions ->
+                listenOptions.Protocols <- HttpProtocols.Http1AndHttp2
+                listenOptions.UseHttps(certPath) |> ignore)
     ) |> ignore
 
     let app = builder.Build()
