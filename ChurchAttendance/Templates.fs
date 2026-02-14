@@ -124,7 +124,7 @@ module Templates =
             else
                 $"""hx-post="{action}" """
 
-        $"""<form {hxAttr} hx-target="#members-table" hx-swap="outerHTML">
+        $"""<form {hxAttr} hx-target="#members-sections" hx-swap="outerHTML">
     <label for="fullName">Full Name
         <input type="text" id="fullName" name="fullName" value="{htmlEncode name}" required>
     </label>
@@ -153,20 +153,19 @@ module Templates =
         $"""<p class="status-msg {cls}">{htmlEncode msg}</p>"""
 
     let private memberRow (m: ChurchAttendance.Member) =
-        let ageLabel = Domain.ageGroupLabel m.AgeGroup
         let inactiveClass = if m.IsActive then "" else " inactive"
 
         let deactivateBtn =
             if m.IsActive then
-                $"""<button class="outline secondary small" hx-delete="/members/{m.Id}" hx-target="#members-table" hx-swap="outerHTML" hx-confirm="Deactivate {htmlEncode m.FullName}?">Deactivate</button>"""
+                $"""<button class="outline secondary small" hx-delete="/members/{m.Id}" hx-target="#members-sections" hx-swap="outerHTML" hx-confirm="Deactivate {htmlEncode m.FullName}?">Deactivate</button>"""
             else
                 ""
 
         let statusText = if m.IsActive then "Active" else "Inactive"
+        let nameAttr = htmlEncode (m.FullName.ToLowerInvariant())
 
-        $"""<tr class="{inactiveClass}" data-age-group="{ageLabel}" data-name="{htmlEncode (m.FullName.ToLowerInvariant())}">
+        $"""<tr class="{inactiveClass}" data-name="{nameAttr}">
     <td>{htmlEncode m.FullName}</td>
-    <td>{Domain.ageGroupLabel m.AgeGroup}</td>
     <td>{Domain.categoryLabel m.Category}</td>
     <td>{statusText}</td>
     <td>
@@ -175,36 +174,48 @@ module Templates =
     </td>
 </tr>"""
 
+    let private renderMemberSection (label: string) (count: int) (rows: string) =
+        $"""<div class="age-group-section collapsed" data-age-group="{label}">
+    <div class="age-group-header"><span class="section-toggle">&#9654;</span> {label} ({count})</div>
+    <div class="age-group-body">
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows}
+            </tbody>
+        </table>
+    </div>
+</div>"""
+
     let membersTable (members: ChurchAttendance.Member list) =
-        let rows =
-            members
-            |> List.sortBy (fun m -> (not m.IsActive, m.FullName))
-            |> List.map memberRow
+        let sections =
+            Domain.allAgeGroups
+            |> List.choose (fun ag ->
+                let groupMembers =
+                    members
+                    |> List.filter (fun m -> m.AgeGroup = ag)
+                    |> List.sortBy (fun m -> (not m.IsActive, m.FullName))
+
+                if groupMembers.IsEmpty then
+                    None
+                else
+                    let label = Domain.ageGroupLabel ag
+                    let rows = groupMembers |> List.map memberRow |> String.concat "\n"
+                    Some (renderMemberSection label groupMembers.Length rows))
             |> String.concat "\n"
 
-        $"""<table id="members-table" role="grid">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Age Group</th>
-            <th>Category</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {rows}
-    </tbody>
-</table>"""
+        $"""<div id="members-sections">
+{sections}
+</div>"""
 
     let membersPage (members: ChurchAttendance.Member list) =
-        let ageGroupFilterOptions =
-            Domain.allAgeGroups
-            |> List.map (fun ag ->
-                let label = Domain.ageGroupLabel ag
-                $"""<option value="{label}">{label}</option>""")
-            |> String.concat "\n"
-
         let content =
             $"""<h1>Members</h1>
 <div class="modal-overlay" id="member-modal-overlay" style="display: none;" onclick="if(event.target === this) closeModal()">
@@ -218,17 +229,9 @@ module Templates =
     <div></div>
     <button hx-get="/members/new" hx-target="#member-form-area" hx-swap="innerHTML" onclick="openModal();document.getElementById('modal-title').textContent='Add New Member'">Add New Member</button>
 </div>
-<div class="grid">
-    <label for="member-name-filter">Search by Name
-        <input type="search" id="member-name-filter" placeholder="Type a name...">
-    </label>
-    <label for="member-age-group-filter">Filter by Age Group
-        <select id="member-age-group-filter">
-            <option value="">All</option>
-            {ageGroupFilterOptions}
-        </select>
-    </label>
-</div>
+<label for="member-name-filter">Search by Name
+    <input type="search" id="member-name-filter" placeholder="Type a name...">
+</label>
 {membersTable members}"""
 
         layout "Members" "members" content

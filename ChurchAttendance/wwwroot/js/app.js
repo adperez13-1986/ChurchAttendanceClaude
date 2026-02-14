@@ -30,11 +30,9 @@ document.addEventListener('htmx:afterOnLoad', function(event) {
         updateAttendanceCount();
     }
 
-    // Reset member filters after members table is swapped (add/edit/deactivate)
+    // Reset member name filter after members table is swapped (add/edit/deactivate)
     if (event.detail.xhr && event.detail.pathInfo.requestPath.startsWith('/members')) {
-        var ageSelect = document.getElementById('member-age-group-filter');
         var nameInput = document.getElementById('member-name-filter');
-        if (ageSelect) ageSelect.value = '';
         if (nameInput) nameInput.value = '';
     }
 });
@@ -62,17 +60,27 @@ function updateAttendanceCount() {
     topBarCount.textContent = totalChecked + ' present';
 }
 
-// Apply name and age group filters on the members page
+// Apply name filter on the members page (sections replace age group filter)
 function filterMemberRows() {
-    var ageSelect = document.getElementById('member-age-group-filter');
     var nameInput = document.getElementById('member-name-filter');
-    var ageValue = ageSelect ? ageSelect.value : '';
     var nameValue = nameInput ? nameInput.value.toLowerCase() : '';
-    var rows = document.querySelectorAll('#members-table tr[data-age-group]');
-    rows.forEach(function (row) {
-        var matchesAge = !ageValue || row.getAttribute('data-age-group') === ageValue;
-        var matchesName = !nameValue || row.getAttribute('data-name').indexOf(nameValue) !== -1;
-        row.style.display = (matchesAge && matchesName) ? '' : 'none';
+
+    var sections = document.querySelectorAll('#members-sections .age-group-section');
+    sections.forEach(function(section) {
+        var rows = section.querySelectorAll('tr[data-name]');
+        var visibleCount = 0;
+        rows.forEach(function(row) {
+            var matchesName = !nameValue || row.getAttribute('data-name').indexOf(nameValue) !== -1;
+            row.style.display = matchesName ? '' : 'none';
+            if (matchesName) visibleCount++;
+        });
+        // Hide section if no matches, expand if searching and has matches
+        if (nameValue) {
+            section.style.display = visibleCount > 0 ? '' : 'none';
+            if (visibleCount > 0) section.classList.remove('collapsed');
+        } else {
+            section.style.display = '';
+        }
     });
 }
 
@@ -116,10 +124,6 @@ document.addEventListener('change', function (e) {
         autoSaveAttendance();
     }
 
-    // Age group filter (members page)
-    if (e.target && e.target.id === 'member-age-group-filter') {
-        filterMemberRows();
-    }
 });
 
 // Name filter (fires on every keystroke)
