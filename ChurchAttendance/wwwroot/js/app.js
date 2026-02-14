@@ -29,6 +29,14 @@ document.addEventListener('htmx:afterOnLoad', function(event) {
     if (event.detail.xhr && event.detail.pathInfo.requestPath === '/attendance/list') {
         updateAttendanceCount();
     }
+
+    // Reset member filters after members table is swapped (add/edit/deactivate)
+    if (event.detail.xhr && event.detail.pathInfo.requestPath.startsWith('/members')) {
+        var ageSelect = document.getElementById('member-age-group-filter');
+        var nameInput = document.getElementById('member-name-filter');
+        if (ageSelect) ageSelect.value = '';
+        if (nameInput) nameInput.value = '';
+    }
 });
 
 // Auto-infer service type from selected date
@@ -102,6 +110,20 @@ function updateAttendanceCount() {
     }
 }
 
+// Apply name and age group filters on the members page
+function filterMemberRows() {
+    var ageSelect = document.getElementById('member-age-group-filter');
+    var nameInput = document.getElementById('member-name-filter');
+    var ageValue = ageSelect ? ageSelect.value : '';
+    var nameValue = nameInput ? nameInput.value.toLowerCase() : '';
+    var rows = document.querySelectorAll('#members-table tr[data-age-group]');
+    rows.forEach(function (row) {
+        var matchesAge = !ageValue || row.getAttribute('data-age-group') === ageValue;
+        var matchesName = !nameValue || row.getAttribute('data-name').indexOf(nameValue) !== -1;
+        row.style.display = (matchesAge && matchesName) ? '' : 'none';
+    });
+}
+
 // Apply both name and age group filters together
 function filterAttendanceRows() {
     var ageSelect = document.getElementById('age-group-filter');
@@ -150,9 +172,14 @@ document.addEventListener('change', function (e) {
         autoSaveAttendance();
     }
 
-    // Age group filter
+    // Age group filter (attendance page)
     if (e.target && e.target.id === 'age-group-filter') {
         filterAttendanceRows();
+    }
+
+    // Age group filter (members page)
+    if (e.target && e.target.id === 'member-age-group-filter') {
+        filterMemberRows();
     }
 });
 
@@ -160,6 +187,11 @@ document.addEventListener('change', function (e) {
 document.addEventListener('input', function (e) {
     if (e.target && e.target.id === 'name-filter') {
         filterAttendanceRows();
+    }
+
+    // Name filter (members page)
+    if (e.target && e.target.id === 'member-name-filter') {
+        filterMemberRows();
     }
 
     // Sync report date inputs with hidden form fields

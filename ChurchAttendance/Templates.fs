@@ -151,11 +151,8 @@ module Templates =
         $"""<p class="status-msg {cls}">{htmlEncode msg}</p>"""
 
     let private memberRow (m: ChurchAttendance.Member) =
-        let statusClass =
-            if m.IsActive then
-                ""
-            else
-                " class=\"inactive\""
+        let ageLabel = Domain.ageGroupLabel m.AgeGroup
+        let inactiveClass = if m.IsActive then "" else " inactive"
 
         let deactivateBtn =
             if m.IsActive then
@@ -165,7 +162,7 @@ module Templates =
 
         let statusText = if m.IsActive then "Active" else "Inactive"
 
-        $"""<tr{statusClass}>
+        $"""<tr class="{inactiveClass}" data-age-group="{ageLabel}" data-name="{htmlEncode (m.FullName.ToLowerInvariant())}">
     <td>{htmlEncode m.FullName}</td>
     <td>{Domain.ageGroupLabel m.AgeGroup}</td>
     <td>{Domain.categoryLabel m.Category}</td>
@@ -199,6 +196,13 @@ module Templates =
 </table>"""
 
     let membersPage (members: ChurchAttendance.Member list) =
+        let ageGroupFilterOptions =
+            Domain.allAgeGroups
+            |> List.map (fun ag ->
+                let label = Domain.ageGroupLabel ag
+                $"""<option value="{label}">{label}</option>""")
+            |> String.concat "\n"
+
         let content =
             $"""<h1>Members</h1>
 <div class="modal-overlay" id="member-modal-overlay" style="display: none;" onclick="if(event.target === this) closeModal()">
@@ -211,6 +215,17 @@ module Templates =
 <div class="grid">
     <div></div>
     <button hx-get="/members/new" hx-target="#member-form-area" hx-swap="innerHTML" onclick="openModal();document.getElementById('modal-title').textContent='Add New Member'">Add New Member</button>
+</div>
+<div class="grid">
+    <label for="member-name-filter">Search by Name
+        <input type="search" id="member-name-filter" placeholder="Type a name...">
+    </label>
+    <label for="member-age-group-filter">Filter by Age Group
+        <select id="member-age-group-filter">
+            <option value="">All</option>
+            {ageGroupFilterOptions}
+        </select>
+    </label>
 </div>
 {membersTable members}"""
 
