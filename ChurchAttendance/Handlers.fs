@@ -185,15 +185,25 @@ module Handlers =
     let private parseServiceType (s: string) =
         Domain.parseServiceType s |> Option.defaultValue SundayService
 
+    let private inferServiceType (date: DateTime) =
+        if date.DayOfWeek = DayOfWeek.Friday then PrayerMeeting
+        else SundayService
+
     // GET /attendance/list
     let attendanceList (ctx: HttpContext) =
         let dateStr =
             ctx.Request.Query.["date"].ToString()
 
         let serviceTypeStr =
-            ctx.Request.Query.["serviceType"].ToString()
+            if ctx.Request.Query.ContainsKey("serviceType") then
+                ctx.Request.Query.["serviceType"].ToString()
+            else
+                ""
 
-        let serviceType = parseServiceType serviceTypeStr
+        let serviceType =
+            match DateTime.TryParse(dateStr) with
+            | true, date when System.String.IsNullOrEmpty(serviceTypeStr) -> inferServiceType date
+            | _ -> parseServiceType serviceTypeStr
         let members = Database.getMembers ()
 
         let checkedIds =
@@ -209,10 +219,12 @@ module Handlers =
             | true, date -> date.Date = DateTime.Today
             | _ -> false
 
-        let serviceLabel =
-            Domain.parseServiceType serviceTypeStr
-            |> Option.map Domain.serviceTypeLabel
-            |> Option.defaultValue "Service"
+        let serviceTypeStr' =
+            match serviceType with
+            | SundayService -> "SundayService"
+            | PrayerMeeting -> "PrayerMeeting"
+
+        let serviceLabel = Domain.serviceTypeLabel serviceType
 
         let firstTimerIds =
             match DateTime.TryParse(dateStr) with
@@ -220,7 +232,7 @@ module Handlers =
             | _ -> Set.empty
 
         let html =
-            Templates.attendanceChecklist members dateStr serviceTypeStr serviceLabel isToday checkedIds firstTimerIds
+            Templates.attendanceChecklist members dateStr serviceTypeStr' serviceLabel isToday checkedIds firstTimerIds
 
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)

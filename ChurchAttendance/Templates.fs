@@ -244,7 +244,6 @@ module Templates =
         <input type="date" id="date" name="date" value="{dateStr}" max="{todayStr}" required>
         <small>Service type auto-detected: Sunday = Sunday Service, Friday = Prayer Meeting</small>
     </label>
-    <input type="hidden" id="serviceType" name="serviceType" value="">
 </form>
 <div id="attendance-area"></div>"""
 

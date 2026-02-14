@@ -39,48 +39,6 @@ document.addEventListener('htmx:afterOnLoad', function(event) {
     }
 });
 
-// Auto-infer service type from selected date
-function updateServiceType() {
-    var dateInput = document.getElementById('date');
-    var serviceInput = document.getElementById('serviceType');
-    if (!dateInput || !serviceInput || !dateInput.value) return;
-
-    var d = new Date(dateInput.value + 'T00:00:00');
-    var day = d.getDay();
-
-    // Sunday (0) → SundayService, Friday (5) → PrayerMeeting, Others → SundayService (default)
-    if (day === 5) {
-        serviceInput.value = 'PrayerMeeting';
-    } else {
-        serviceInput.value = 'SundayService';
-    }
-}
-
-// Initialize service type on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateServiceType();
-});
-
-// Update service type after HTMX loads/swaps content (for attendance form)
-document.addEventListener('htmx:afterSwap', function(event) {
-    updateServiceType();
-});
-
-// CRITICAL: Update service type BEFORE HTMX sends the request
-document.addEventListener('htmx:configRequest', function(event) {
-    // If this is a request that includes the date/serviceType parameters
-    if (event.detail.path === '/attendance/list' || event.detail.path === '/attendance') {
-        updateServiceType();
-    }
-});
-
-// Update service type when date changes
-document.addEventListener('change', function (e) {
-    if (e.target && e.target.id === 'date') {
-        updateServiceType();
-    }
-});
-
 // Update attendance counter display
 function updateAttendanceCount() {
     var counterDiv = document.getElementById('attendance-count');
