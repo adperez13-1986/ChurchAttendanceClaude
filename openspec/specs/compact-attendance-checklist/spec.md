@@ -35,15 +35,17 @@ The attendance checklist SHALL display a sticky top bar that remains visible at 
 - **THEN** the total count in the sticky top bar updates immediately
 
 ### Requirement: Expandable search
-The sticky top bar SHALL contain a search icon button. When tapped, the search icon SHALL reveal a text input that replaces the bar content. Typing in the input SHALL filter member rows across all sections, showing only rows whose name contains the search text (case-insensitive). Clearing the input or tapping a close button SHALL restore the normal top bar and show all rows.
+The sticky top bar SHALL contain a search icon button. When tapped, the search icon SHALL reveal a text input that replaces the bar content. Typing in the input SHALL filter member rows across all sections, showing only rows whose name contains the search text (case-insensitive). Sections with matching members SHALL be auto-expanded. Sections with no matches SHALL be hidden. Clearing the input or tapping a close button SHALL restore the normal top bar, show all sections, and restore sections to their collapsed state.
 
 #### Scenario: Open search and filter
 - **WHEN** the user taps the search icon and types "ali"
-- **THEN** only members whose name contains "ali" (case-insensitive) are visible, and sections with no visible members are hidden
+- **THEN** only members whose name contains "ali" (case-insensitive) are visible
+- **AND** sections with matching members are auto-expanded
+- **AND** sections with no visible members are hidden
 
 #### Scenario: Close search
 - **WHEN** the user taps the close button on the search input
-- **THEN** the search input is hidden, the normal top bar content is restored, and all member rows are visible again
+- **THEN** the search input is hidden, the normal top bar content is restored, all sections are visible, and sections are restored to collapsed state
 
 ### Requirement: Sticky bottom bar
 The attendance checklist SHALL display a sticky bottom bar that remains visible at the bottom of the scrollable area. The bar SHALL contain the "View Summary" submit button, the "Share PDF" button, and the auto-save status indicator. The bar SHALL use `position: sticky` with `bottom: 0`.
