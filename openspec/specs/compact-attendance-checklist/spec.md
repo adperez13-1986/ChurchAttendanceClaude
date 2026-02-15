@@ -55,11 +55,16 @@ The attendance checklist SHALL display a sticky bottom bar that remains visible 
 - **THEN** the View Summary and Share PDF buttons remain visible at the bottom of the viewport
 
 ### Requirement: Auto-save behaviour preserved
-Toggling any member checkbox SHALL trigger an auto-save request to `/attendance/auto-save` with the full form data. The auto-save status SHALL be displayed in the sticky bottom bar. This behaviour SHALL be identical to the existing auto-save implementation.
+Toggling any member checkbox SHALL trigger an auto-save request to `POST /attendance/toggle` with the individual member's ID and checked state (`date`, `serviceType`, `memberId`, `checked`). The auto-save status SHALL be displayed in the sticky bottom bar. Each toggle SHALL send only the changed member, not the full form data.
 
 #### Scenario: Auto-save on checkbox toggle
 - **WHEN** a member checkbox is toggled
-- **THEN** a POST request is sent to `/attendance/auto-save` with the form data, and the save status is shown in the sticky bottom bar
+- **THEN** a POST request is sent to `/attendance/toggle` with `memberId` set to the toggled member's ID and `checked` set to the checkbox state
+- **AND** the save status is shown in the sticky bottom bar
+
+#### Scenario: Multiple users toggling simultaneously
+- **WHEN** two users toggle different member checkboxes at the same time for the same date/service
+- **THEN** both toggles are saved independently and neither overwrites the other
 
 ### Requirement: Past-date confirmation preserved
 When the selected date is not today, the checklist SHALL first display a confirmation prompt asking the user to confirm recording attendance for a past date. The compact checklist SHALL only be shown after confirmation. This behaviour SHALL be identical to the existing implementation.
