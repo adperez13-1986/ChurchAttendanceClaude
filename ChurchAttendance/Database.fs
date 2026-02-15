@@ -100,18 +100,59 @@ module Database =
         |> List.tryFind (fun r -> r.Date.Date = date.Date && r.ServiceType = serviceType)
 
     let saveAttendanceRecord (record: AttendanceRecord) =
-        let records = getAttendance ()
+        lock lockObj (fun () ->
+            let records: AttendanceRecord list = readFile attendanceFile []
 
-        let updated =
-            match
+            let updated =
+                match
+                    records
+                    |> List.tryFindIndex (fun r ->
+                        r.Date.Date = record.Date.Date && r.ServiceType = record.ServiceType)
+                with
+                | Some idx -> records |> List.mapi (fun i r -> if i = idx then record else r)
+                | None -> records @ [ record ]
+
+            let json = JsonSerializer.Serialize(updated, jsonOptions)
+            File.WriteAllText(attendanceFile, json))
+
+    let toggleAttendanceMember (date: DateTime) (serviceType: ServiceType) (memberId: Guid) (add: bool) : int =
+        lock lockObj (fun () ->
+            let records: AttendanceRecord list = readFile attendanceFile []
+
+            let idx =
                 records
                 |> List.tryFindIndex (fun r ->
-                    r.Date.Date = record.Date.Date && r.ServiceType = record.ServiceType)
-            with
-            | Some idx -> records |> List.mapi (fun i r -> if i = idx then record else r)
-            | None -> records @ [ record ]
+                    r.Date.Date = date.Date && r.ServiceType = serviceType)
 
-        saveAttendance updated
+            let record =
+                match idx with
+                | Some i -> records.[i]
+                | None ->
+                    { Id = Guid.NewGuid()
+                      Date = date
+                      ServiceType = serviceType
+                      MemberIds = [] }
+
+            let updatedIds =
+                if add then
+                    if record.MemberIds |> List.contains memberId then
+                        record.MemberIds
+                    else
+                        record.MemberIds @ [ memberId ]
+                else
+                    record.MemberIds |> List.filter (fun id -> id <> memberId)
+
+            let updatedRecord = { record with MemberIds = updatedIds }
+
+            let updatedRecords =
+                match idx with
+                | Some i -> records |> List.mapi (fun j r -> if j = i then updatedRecord else r)
+                | None -> records @ [ updatedRecord ]
+
+            let json = JsonSerializer.Serialize(updatedRecords, jsonOptions)
+            File.WriteAllText(attendanceFile, json)
+
+            updatedIds.Length)
 
     /// Returns the set of member IDs whose FirstAttendedDate matches the given date.
     let getFirstTimerIds (date: DateTime) : Set<Guid> =

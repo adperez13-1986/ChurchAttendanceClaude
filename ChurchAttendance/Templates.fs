@@ -282,7 +282,7 @@ module Templates =
             let nameAttr = htmlEncode (m.FullName.ToLowerInvariant())
             let nameText = htmlEncode m.FullName
             $"""<label class="attendance-row" data-name="{nameAttr}">
-            <input type="checkbox" name="memberIds" value="{m.Id}"{isChecked}> {nameText}
+            <input type="checkbox" name="memberIds" value="{m.Id}" data-member-id="{m.Id}"{isChecked}> {nameText}
         </label>"""
 
         let renderSection (label: string) (checkedCount: int) (total: int) (memberRows: string) =

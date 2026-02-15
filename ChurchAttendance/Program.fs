@@ -68,7 +68,7 @@ let main args =
     mapGet "/attendance" Handlers.attendancePage
     mapGet "/attendance/list" Handlers.attendanceList
 
-    mapPost "/attendance/auto-save" (fun ctx -> Handlers.autoSaveAttendance ctx)
+    mapPost "/attendance/toggle" (fun ctx -> Handlers.toggleAttendance ctx)
     mapPost "/attendance" (fun ctx -> Handlers.saveAttendance ctx)
     mapPost "/attendance/export-pdf" (fun ctx -> Handlers.exportAttendancePdf ctx)
 

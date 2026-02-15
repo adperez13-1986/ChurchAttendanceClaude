@@ -109,14 +109,24 @@ function filterAttendanceRows() {
     });
 }
 
-// Auto-save attendance on checkbox change
-function autoSaveAttendance() {
+// Auto-save attendance: toggle a single member
+function autoSaveToggle(checkbox) {
     var form = document.querySelector('form[hx-post="/attendance"]');
     if (!form) return;
-    var formData = new FormData(form);
+    var dateInput = form.querySelector('input[name="date"]');
+    var serviceTypeInput = form.querySelector('input[name="serviceType"]');
+    if (!dateInput || !serviceTypeInput) return;
+
     var status = document.getElementById('auto-save-status');
     if (status) status.innerHTML = '<em>Saving...</em>';
-    fetch('/attendance/auto-save', { method: 'POST', body: formData })
+
+    var formData = new FormData();
+    formData.append('date', dateInput.value);
+    formData.append('serviceType', serviceTypeInput.value);
+    formData.append('memberId', checkbox.getAttribute('data-member-id'));
+    formData.append('checked', checkbox.checked ? 'true' : 'false');
+
+    fetch('/attendance/toggle', { method: 'POST', body: formData })
         .then(function (r) { return r.text(); })
         .then(function (html) { if (status) status.innerHTML = html; })
         .catch(function () { if (status) status.innerHTML = '<span class="status-msg error" style="padding:0.3rem 0.6rem;font-size:0.85rem">Save failed</span>'; });
@@ -127,7 +137,7 @@ document.addEventListener('change', function (e) {
     // Auto-save on individual checkbox toggle
     if (e.target && e.target.name === 'memberIds') {
         updateAttendanceCount();
-        autoSaveAttendance();
+        autoSaveToggle(e.target);
     }
 
 });

@@ -237,33 +237,22 @@ module Handlers =
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)
 
-    // POST /attendance/auto-save
-    let autoSaveAttendance (ctx: HttpContext) =
+    // POST /attendance/toggle
+    let toggleAttendance (ctx: HttpContext) =
         task {
             let! _ = ctx.Request.ReadFormAsync()
             let dateStr = formValue ctx "date" |> Option.defaultValue ""
             let serviceTypeStr = formValue ctx "serviceType" |> Option.defaultValue "SundayService"
             let serviceType = parseServiceType serviceTypeStr
-            let memberIdStrs = formValues ctx "memberIds"
+            let memberIdStr = formValue ctx "memberId" |> Option.defaultValue ""
+            let checkedStr = formValue ctx "checked" |> Option.defaultValue "false"
+            let isChecked = checkedStr = "true"
 
-            let memberIds =
-                memberIdStrs
-                |> List.choose (fun s ->
-                    match Guid.TryParse(s) with
-                    | true, g -> Some g
-                    | _ -> None)
-
-            match DateTime.TryParse(dateStr) with
-            | true, date ->
-                let record =
-                    { Id = Guid.NewGuid()
-                      Date = date
-                      ServiceType = serviceType
-                      MemberIds = memberIds }
-
-                Database.saveAttendanceRecord record
+            match DateTime.TryParse(dateStr), Guid.TryParse(memberIdStr) with
+            | (true, date), (true, memberId) ->
+                let count = Database.toggleAttendanceMember date serviceType memberId isChecked
                 ctx.Response.ContentType <- "text/html; charset=utf-8"
-                return! ctx.Response.WriteAsync($"""<span class="status-msg success" style="padding:0.3rem 0.6rem;font-size:0.85rem">Saved ({memberIds.Length} present)</span>""")
+                return! ctx.Response.WriteAsync($"""<span class="status-msg success" style="padding:0.3rem 0.6rem;font-size:0.85rem">Saved ({count} present)</span>""")
             | _ ->
                 ctx.Response.ContentType <- "text/html; charset=utf-8"
                 return! ctx.Response.WriteAsync("")
