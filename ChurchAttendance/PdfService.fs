@@ -157,95 +157,95 @@ module PdfService =
                                             section.Item().Text($"Total Present: {summary.Total}")
                                             |> ignore
 
-                                            // Attendees table
-                                            section
-                                                .Item()
-                                                .Table(fun table ->
-                                                    table.ColumnsDefinition(fun cols ->
-                                                        cols.ConstantColumn(30f)
-                                                        cols.RelativeColumn(3f)
-                                                        cols.RelativeColumn(1f)
-                                                        cols.RelativeColumn(1.5f))
+                                            // Attendees grouped by age group
+                                            let firstTimerNames = summary.FirstTimers |> Set.ofList
 
-                                                    table.Header(fun header ->
-                                                        header
-                                                            .Cell()
-                                                            .BorderBottom(1f)
-                                                            .Padding(4f)
-                                                            .Text("#")
-                                                            .Bold()
-                                                        |> ignore
-
-                                                        header
-                                                            .Cell()
-                                                            .BorderBottom(1f)
-                                                            .Padding(4f)
-                                                            .Text("Name")
-                                                            .Bold()
-                                                        |> ignore
-
-                                                        header
-                                                            .Cell()
-                                                            .BorderBottom(1f)
-                                                            .Padding(4f)
-                                                            .Text("Age Group")
-                                                            .Bold()
-                                                        |> ignore
-
-                                                        header
-                                                            .Cell()
-                                                            .BorderBottom(1f)
-                                                            .Padding(4f)
-                                                            .Text("Category")
-                                                            .Bold()
-                                                        |> ignore)
-
-                                                    let firstTimerNames = summary.FirstTimers |> Set.ofList
-
+                                            for ag in Domain.allAgeGroups do
+                                                let groupMembers =
                                                     summary.Attendees
+                                                    |> List.filter (fun m -> m.AgeGroup = ag)
                                                     |> List.sortBy (fun m -> m.FullName)
-                                                    |> List.iteri (fun i m ->
-                                                        let isFirstTimer = firstTimerNames.Contains m.FullName
 
-                                                        let bgColor =
-                                                            if isFirstTimer then
-                                                                Colors.Yellow.Lighten4
-                                                            else
-                                                                Colors.White
+                                                if not groupMembers.IsEmpty then
+                                                    let groupLabel = Domain.ageGroupLabel ag
 
-                                                        table
-                                                            .Cell()
-                                                            .Background(bgColor)
-                                                            .Padding(3f)
-                                                            .Text(string (i + 1))
-                                                        |> ignore
+                                                    section
+                                                        .Item()
+                                                        .PaddingTop(6f)
+                                                        .Text($"{groupLabel} ({groupMembers.Length})")
+                                                        .Bold()
+                                                        .FontSize(11f)
+                                                    |> ignore
 
-                                                        let nameText =
-                                                            if isFirstTimer then
-                                                                m.FullName + " *"
-                                                            else
-                                                                m.FullName
+                                                    section
+                                                        .Item()
+                                                        .Table(fun table ->
+                                                            table.ColumnsDefinition(fun cols ->
+                                                                cols.ConstantColumn(30f)
+                                                                cols.RelativeColumn(3f)
+                                                                cols.RelativeColumn(1.5f))
 
-                                                        table
-                                                            .Cell()
-                                                            .Background(bgColor)
-                                                            .Padding(3f)
-                                                            .Text(nameText)
-                                                        |> ignore
+                                                            table.Header(fun header ->
+                                                                header
+                                                                    .Cell()
+                                                                    .BorderBottom(1f)
+                                                                    .Padding(4f)
+                                                                    .Text("#")
+                                                                    .Bold()
+                                                                |> ignore
 
-                                                        table
-                                                            .Cell()
-                                                            .Background(bgColor)
-                                                            .Padding(3f)
-                                                            .Text(Domain.ageGroupLabel m.AgeGroup)
-                                                        |> ignore
+                                                                header
+                                                                    .Cell()
+                                                                    .BorderBottom(1f)
+                                                                    .Padding(4f)
+                                                                    .Text("Name")
+                                                                    .Bold()
+                                                                |> ignore
 
-                                                        table
-                                                            .Cell()
-                                                            .Background(bgColor)
-                                                            .Padding(3f)
-                                                            .Text(Domain.categoryLabel m.Category)
-                                                        |> ignore))
+                                                                header
+                                                                    .Cell()
+                                                                    .BorderBottom(1f)
+                                                                    .Padding(4f)
+                                                                    .Text("Category")
+                                                                    .Bold()
+                                                                |> ignore)
+
+                                                            groupMembers
+                                                            |> List.iteri (fun i m ->
+                                                                let isFirstTimer = firstTimerNames.Contains m.FullName
+
+                                                                let bgColor =
+                                                                    if isFirstTimer then
+                                                                        Colors.Yellow.Lighten4
+                                                                    else
+                                                                        Colors.White
+
+                                                                table
+                                                                    .Cell()
+                                                                    .Background(bgColor)
+                                                                    .Padding(3f)
+                                                                    .Text(string (i + 1))
+                                                                |> ignore
+
+                                                                let nameText =
+                                                                    if isFirstTimer then
+                                                                        m.FullName + " *"
+                                                                    else
+                                                                        m.FullName
+
+                                                                table
+                                                                    .Cell()
+                                                                    .Background(bgColor)
+                                                                    .Padding(3f)
+                                                                    .Text(nameText)
+                                                                |> ignore
+
+                                                                table
+                                                                    .Cell()
+                                                                    .Background(bgColor)
+                                                                    .Padding(3f)
+                                                                    .Text(Domain.categoryLabel m.Category)
+                                                                |> ignore))
                                             |> ignore
 
                                             // Age group + category summary side by side
