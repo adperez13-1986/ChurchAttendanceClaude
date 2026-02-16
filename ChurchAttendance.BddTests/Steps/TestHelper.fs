@@ -10,7 +10,8 @@ let mutable private _lastResponse: string option = None
 let mutable private _lastPdfBytes: byte[] option = None
 
 let private getDataDir () =
-    let dir = Path.Combine(AppContext.BaseDirectory, "data")
+    let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+    let dir = Path.Combine(home, ".church-attendance", "data")
     if not (Directory.Exists dir) then
         Directory.CreateDirectory dir |> ignore
     dir
@@ -19,10 +20,8 @@ let cleanDataFiles () =
     let dir = getDataDir ()
     let membersFile = Path.Combine(dir, "members.json")
     let attendanceFile = Path.Combine(dir, "attendance.json")
-    let settingsFile = Path.Combine(dir, "settings.json")
     if File.Exists membersFile then File.Delete membersFile
     if File.Exists attendanceFile then File.Delete attendanceFile
-    if File.Exists settingsFile then File.Delete settingsFile
     _members <- Map.empty
     _lastResponse <- None
     _lastPdfBytes <- None

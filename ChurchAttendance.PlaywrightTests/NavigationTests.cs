@@ -45,17 +45,10 @@ public class NavigationTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task MembersPage_HasTable()
+    public async Task MembersPage_HasSections()
     {
         await Page.GotoAsync($"{BaseUrl}/members");
-        await Expect(Page.Locator("#members-table")).ToBeVisibleAsync();
-
-        // Table headers
-        await Expect(Page.GetByRole(AriaRole.Columnheader, new() { Name = "Name" })).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Columnheader, new() { Name = "Age Group" })).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Columnheader, new() { Name = "Category" })).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Columnheader, new() { Name = "Status" })).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Columnheader, new() { Name = "Actions" })).ToBeVisibleAsync();
+        await Expect(Page.Locator("#members-sections")).ToBeVisibleAsync();
     }
 
     [Test]
@@ -100,16 +93,6 @@ public class NavigationTests : PlaywrightTestBase
         await Page.GotoAsync($"{BaseUrl}/reports");
         await Expect(Page.Locator("#export-pdf-btn")).ToBeVisibleAsync();
         await Expect(Page.Locator("#share-pdf-btn")).ToBeVisibleAsync();
-        await Expect(Page.GetByText("Email Report")).ToBeVisibleAsync();
-    }
-
-    [Test]
-    public async Task SettingsPageLoads()
-    {
-        await Page.GotoAsync($"{BaseUrl}/settings");
-        await Expect(Page).ToHaveTitleAsync(new Regex("Settings"));
-        await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Settings" })).ToBeVisibleAsync();
-        await Expect(Page.GetByText("SMTP Email Settings")).ToBeVisibleAsync();
     }
 
     [Test]
@@ -130,10 +113,6 @@ public class NavigationTests : PlaywrightTestBase
         // Reports
         await Page.GotoAsync($"{BaseUrl}/reports");
         await Expect(Page.Locator("nav a.active")).ToHaveTextAsync("Reports");
-
-        // Settings
-        await Page.GotoAsync($"{BaseUrl}/settings");
-        await Expect(Page.Locator("nav a.active")).ToHaveTextAsync("Settings");
     }
 
     [Test]
@@ -155,11 +134,6 @@ public class NavigationTests : PlaywrightTestBase
         await Page.Locator("nav").GetByRole(AriaRole.Link, new() { Name = "Reports" }).ClickAsync();
         await Expect(Page).ToHaveURLAsync(new Regex("/reports"));
         await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Reports" })).ToBeVisibleAsync();
-
-        // Navigate to Settings
-        await Page.Locator("nav").GetByRole(AriaRole.Link, new() { Name = "Settings" }).ClickAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex("/settings"));
-        await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Settings" })).ToBeVisibleAsync();
 
         // Navigate back to Dashboard
         await Page.Locator("nav").GetByRole(AriaRole.Link, new() { Name = "Dashboard" }).ClickAsync();

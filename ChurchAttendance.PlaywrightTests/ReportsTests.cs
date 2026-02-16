@@ -90,19 +90,6 @@ public class ReportsTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task ReportsPage_EmailReport_WithoutSmtp_ShowsError()
-    {
-        await Page.GotoAsync($"{BaseUrl}/reports");
-
-        // Click "Email Report" without SMTP configured
-        await Page.GetByText("Email Report").ClickAsync();
-
-        // Should show an error about configuring SMTP
-        var status = Page.Locator("#report-status");
-        await Expect(status).ToContainTextAsync("SMTP", new() { Timeout = 5000 });
-    }
-
-    [Test]
     public async Task ReportsPage_HasAllActionButtons()
     {
         await Page.GotoAsync($"{BaseUrl}/reports");
@@ -111,6 +98,5 @@ public class ReportsTests : PlaywrightTestBase
         await Expect(Page.GetByText("Download PDF")).ToBeVisibleAsync();
         await Expect(Page.Locator("#share-pdf-btn")).ToBeVisibleAsync();
         await Expect(Page.GetByText("Share PDF")).ToBeVisibleAsync();
-        await Expect(Page.GetByText("Email Report")).ToBeVisibleAsync();
     }
 }

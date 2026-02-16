@@ -19,8 +19,10 @@ function closeModal() {
 document.addEventListener('htmx:afterOnLoad', function(event) {
     // If the request was to /members (POST or PUT) and succeeded, close the modal
     if (event.detail.xhr && event.detail.xhr.status === 200) {
-        var url = event.detail.pathInfo.requestPath;
-        if (url.startsWith('/members') && (event.detail.verb === 'POST' || event.detail.verb === 'PUT')) {
+        var pathInfo = event.detail.pathInfo || {};
+        var url = pathInfo.requestPath || (event.detail.requestConfig && event.detail.requestConfig.path) || '';
+        var verb = ((event.detail.requestConfig && event.detail.requestConfig.verb) || '').toUpperCase();
+        if (url.startsWith('/members') && (verb === 'POST' || verb === 'PUT')) {
             closeModal();
         }
     }

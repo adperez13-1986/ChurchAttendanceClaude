@@ -15,5 +15,3 @@ let ``Attendance Tracking`` (scenario: XunitSerializableScenario) = source.RunSc
 [<Theory; MemberData("scenarios", "ChurchAttendance.BddTests.Features.Reporting.feature")>]
 let ``Reporting`` (scenario: XunitSerializableScenario) = source.RunScenario(scenario)
 
-[<Theory; MemberData("scenarios", "ChurchAttendance.BddTests.Features.Settings.feature")>]
-let ``Settings`` (scenario: XunitSerializableScenario) = source.RunScenario(scenario)

@@ -78,9 +78,7 @@ module Handlers =
 
             if isHtmx ctx then
                 let members = Database.getMembers()
-                let tableHtml = Templates.membersTable members
-                let closeScript = "<script>document.getElementById('member-modal').close()</script>"
-                let html = tableHtml + closeScript
+                let html = Templates.membersTable members
 
                 ctx.Response.ContentType <- "text/html; charset=utf-8"
                 return! ctx.Response.WriteAsync(html)
@@ -144,9 +142,7 @@ module Handlers =
                     Database.updateMember updated
 
                     let members = Database.getMembers()
-                    let tableHtml = Templates.membersTable members
-                    let closeScript = "<script>document.getElementById('member-modal').close()</script>"
-                    let html = tableHtml + closeScript
+                    let html = Templates.membersTable members
 
                     ctx.Response.ContentType <- "text/html; charset=utf-8"
                     return! ctx.Response.WriteAsync(html)

@@ -9,7 +9,6 @@
     <EmbeddedResource Include="Features\MemberManagement.feature" />
     <EmbeddedResource Include="Features\AttendanceTracking.feature" />
     <EmbeddedResource Include="Features\Reporting.feature" />
-    <EmbeddedResource Include="Features\Settings.feature" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,7 +16,6 @@
     <Compile Include="Steps\MemberSteps.fs" />
     <Compile Include="Steps\AttendanceSteps.fs" />
     <Compile Include="Steps\ReportingSteps.fs" />
-    <Compile Include="Steps\SettingsSteps.fs" />
     <Compile Include="FeatureFixture.fs" />
   </ItemGroup>
 

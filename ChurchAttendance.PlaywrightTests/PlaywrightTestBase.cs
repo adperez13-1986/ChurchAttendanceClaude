@@ -15,54 +15,66 @@ public class PlaywrightTestBase : PageTest
     private static Process? _serverProcess;
     private static readonly object _lock = new();
     private static int _fixtureCount;
+    private static readonly TaskCompletionSource<bool> _serverReady = new();
 
     [OneTimeSetUp]
     public async Task BaseOneTimeSetUp()
     {
+        bool isStarter = false;
         lock (_lock)
         {
             _fixtureCount++;
-            if (_serverProcess is not null)
-                return;
-
-            var projectDir = Path.GetFullPath(
-                Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "ChurchAttendance"));
-
-            _serverProcess = new Process
+            if (_serverProcess is null)
             {
-                StartInfo = new ProcessStartInfo
+                isStarter = true;
+                var projectDir = Path.GetFullPath(
+                    Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "ChurchAttendance"));
+
+                _serverProcess = new Process
                 {
-                    FileName = "dotnet",
-                    Arguments = "run",
-                    WorkingDirectory = projectDir,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    Environment = { ["DOTNET_ENVIRONMENT"] = "Development" }
-                }
-            };
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "dotnet",
+                        Arguments = "run",
+                        WorkingDirectory = projectDir,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        Environment = { ["DOTNET_ENVIRONMENT"] = "Development" }
+                    }
+                };
 
-            _serverProcess.Start();
+                _serverProcess.Start();
+            }
         }
 
-        // Wait for the server to be ready
-        using var httpClient = new HttpClient();
-        for (var i = 0; i < 30; i++)
+        if (isStarter)
         {
-            try
+            // Poll until server is ready, then signal all waiters
+            using var httpClient = new HttpClient();
+            for (var i = 0; i < 30; i++)
             {
-                var response = await httpClient.GetAsync(BaseUrl);
-                if (response.IsSuccessStatusCode)
-                    return;
+                try
+                {
+                    var response = await httpClient.GetAsync(BaseUrl);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        _serverReady.TrySetResult(true);
+                        return;
+                    }
+                }
+                catch
+                {
+                    // Server not ready yet
+                }
+                await Task.Delay(1000);
             }
-            catch
-            {
-                // Server not ready yet
-            }
-            await Task.Delay(1000);
+
+            _serverReady.TrySetException(new Exception("Server did not start within 30 seconds."));
         }
 
-        throw new Exception("Server did not start within 30 seconds.");
+        // All fixtures wait for the server to be ready
+        await _serverReady.Task;
     }
 
     [OneTimeTearDown]
