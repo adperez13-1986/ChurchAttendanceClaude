@@ -1,3 +1,19 @@
+/* Brand accent color */
+:root,
+[data-theme="light"] {
+    --pico-primary: #0d9488;
+    --pico-primary-hover: #0f766e;
+    --pico-primary-focus: rgba(13, 148, 136, 0.25);
+    --pico-primary-inverse: #fff;
+}
+
+[data-theme="dark"] {
+    --pico-primary: #2dd4bf;
+    --pico-primary-hover: #5eead4;
+    --pico-primary-focus: rgba(45, 212, 191, 0.25);
+    --pico-primary-inverse: #1a1a2e;
+}
+
 .stat {
     font-size: 2.5rem;
     font-weight: bold;
@@ -11,9 +27,28 @@ article.stat-green { border-left: 4px solid #22c55e; }
 article.stat-amber { border-left: 4px solid #f59e0b; }
 article.stat-purple { border-left: 4px solid #8b5cf6; }
 
+/* Card styling: subtle shadow + rounded corners */
+article {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+/* Nav active indicator */
 nav a.active {
     font-weight: bold;
-    text-decoration: underline;
+    text-decoration: none;
+    border-bottom: 2px solid var(--pico-primary);
+    padding-bottom: 0.2rem;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+    line-height: 1;
 }
 
 .inactive td {
@@ -32,15 +67,17 @@ button.small, .small {
 }
 
 .status-msg.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background-color: var(--pico-ins-color, #d4edda);
+    color: var(--pico-color, #155724);
+    border: 1px solid var(--pico-primary);
+    opacity: 0.85;
 }
 
 .status-msg.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background-color: var(--pico-del-color, #f8d7da);
+    color: var(--pico-color, #721c24);
+    border: 1px solid var(--pico-del-color, #f5c6cb);
+    opacity: 0.85;
 }
 
 mark {
@@ -68,8 +105,8 @@ table input[type="checkbox"] {
     position: sticky;
     top: 0;
     z-index: 10;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+    background-color: var(--pico-card-background-color, #f8f9fa);
+    border-bottom: 1px solid var(--pico-muted-border-color, #dee2e6);
     padding: 0.5rem 1rem;
     display: flex;
     align-items: center;
@@ -93,8 +130,8 @@ table input[type="checkbox"] {
 
 .top-bar-count {
     font-size: 0.9rem;
-    color: #155724;
-    background-color: #d4edda;
+    color: var(--pico-primary);
+    background-color: var(--pico-primary-focus);
     padding: 0.15rem 0.5rem;
     border-radius: 12px;
     white-space: nowrap;
@@ -154,9 +191,9 @@ table input[type="checkbox"] {
     font-weight: 700;
     font-size: 0.95rem;
     padding: 0.5rem 1rem;
-    background-color: #e9ecef;
-    border-bottom: 1px solid #dee2e6;
-    color: #495057;
+    background-color: var(--pico-card-background-color, #e9ecef);
+    border-bottom: 1px solid var(--pico-muted-border-color, #dee2e6);
+    color: var(--pico-muted-color, #495057);
     position: sticky;
     top: 45px;
     z-index: 5;
@@ -165,7 +202,7 @@ table input[type="checkbox"] {
 }
 
 .age-group-header:active {
-    background-color: #dee2e6;
+    opacity: 0.8;
 }
 
 .section-toggle {
@@ -190,14 +227,14 @@ table input[type="checkbox"] {
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 1rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--pico-muted-border-color, #f0f0f0);
     cursor: pointer;
     margin: 0;
     font-size: 1rem;
 }
 
 .attendance-row:hover {
-    background-color: #f8f9fa;
+    background-color: var(--pico-card-background-color, #f8f9fa);
 }
 
 .attendance-row input[type="checkbox"] {
@@ -211,8 +248,8 @@ table input[type="checkbox"] {
     position: sticky;
     bottom: 0;
     z-index: 10;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
+    background-color: var(--pico-card-background-color, #f8f9fa);
+    border-top: 1px solid var(--pico-muted-border-color, #dee2e6);
     padding: 0.5rem 1rem;
     display: flex;
     align-items: center;

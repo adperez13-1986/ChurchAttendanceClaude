@@ -1,3 +1,24 @@
+// Theme toggle
+function updateThemeIcon() {
+    var btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    var theme = document.documentElement.getAttribute('data-theme') || 'light';
+    btn.textContent = theme === 'dark' ? '\u2600' : '\u263E';
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target && (e.target.id === 'theme-toggle' || e.target.closest('#theme-toggle'))) {
+        var current = document.documentElement.getAttribute('data-theme') || 'light';
+        var next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateThemeIcon();
+    }
+});
+
+// Set icon on load
+updateThemeIcon();
+
 // Custom Modal Functions
 function openModal() {
     var overlay = document.getElementById('member-modal-overlay');

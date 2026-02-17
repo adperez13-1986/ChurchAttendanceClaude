@@ -7,22 +7,29 @@ module Templates =
     let private htmlEncode (s: string) =
         System.Net.WebUtility.HtmlEncode(s)
 
+    let private themeScript =
+        """<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light')</script>"""
+
     let loginPage (error: string option) =
         let errorHtml =
             match error with
-            | Some msg -> $"""<p style="color:var(--pico-color-red-500);text-align:center">{htmlEncode msg}</p>"""
+            | Some msg -> $"""<p class="status-msg error" style="text-align:center">{htmlEncode msg}</p>"""
             | None -> ""
 
         $"""<!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login - Church Attendance</title>
+    {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/app.css?v=6">
+    <link rel="stylesheet" href="/css/app.css?v=7">
 </head>
 <body>
+    <div style="position:absolute;top:1rem;right:1rem">
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">&#9790;</button>
+    </div>
     <main class="container" style="max-width:400px;margin-top:10vh">
         <article>
             <header><h3 style="text-align:center">Church Attendance</h3></header>
@@ -35,18 +42,20 @@ module Templates =
             </form>
         </article>
     </main>
+    <script src="/js/app.js"></script>
 </body>
 </html>"""
 
     let layout (title: string) (activeNav: string) (content: string) =
         $"""<!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{htmlEncode title} - Church Attendance</title>
+    {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/app.css?v=6">
+    <link rel="stylesheet" href="/css/app.css?v=7">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
@@ -59,6 +68,7 @@ module Templates =
             <li><a href="/members" class="{if activeNav = "members" then "active" else ""}">Members</a></li>
             <li><a href="/attendance" class="{if activeNav = "attendance" then "active" else ""}">Attendance</a></li>
             <li><a href="/reports" class="{if activeNav = "reports" then "active" else ""}">Reports</a></li>
+            <li><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">&#9790;</button></li>
             <li><form method="post" action="/logout" style="margin:0"><button type="submit" class="outline secondary" style="padding:0.3rem 0.6rem;font-size:0.85rem">Logout</button></form></li>
         </ul>
     </nav>
