@@ -1,6 +1,9 @@
 namespace ChurchAttendance
 
 open System
+open System.Security.Claims
+open Microsoft.AspNetCore.Authentication
+open Microsoft.AspNetCore.Authentication.Cookies
 open Microsoft.AspNetCore.Http
 
 module Handlers =
@@ -17,6 +20,38 @@ module Handlers =
         match ctx.Request.Form.TryGetValue(key) with
         | true, values -> values |> Seq.toList
         | _ -> []
+
+    // GET /login
+    let loginPage (ctx: HttpContext) =
+        let html = Templates.loginPage None
+        ctx.Response.ContentType <- "text/html; charset=utf-8"
+        ctx.Response.WriteAsync(html)
+
+    // POST /login
+    let loginPost (ctx: HttpContext) (appPassword: string) =
+        task {
+            let! _ = ctx.Request.ReadFormAsync()
+            let password = formValue ctx "password" |> Option.defaultValue ""
+
+            if password = appPassword then
+                let claims = [| Claim(ClaimTypes.Name, "user") |]
+                let identity = ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)
+                let principal = ClaimsPrincipal(identity)
+                let props = AuthenticationProperties(IsPersistent = true)
+                do! ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, props)
+                ctx.Response.Redirect("/")
+            else
+                let html = Templates.loginPage (Some "Invalid password")
+                ctx.Response.ContentType <- "text/html; charset=utf-8"
+                do! ctx.Response.WriteAsync(html)
+        }
+
+    // POST /logout
+    let logoutPost (ctx: HttpContext) : Threading.Tasks.Task =
+        task {
+            do! ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)
+            ctx.Response.Redirect("/login")
+        }
 
     // GET /
     let dashboard (ctx: HttpContext) =

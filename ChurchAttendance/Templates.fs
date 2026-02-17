@@ -7,6 +7,37 @@ module Templates =
     let private htmlEncode (s: string) =
         System.Net.WebUtility.HtmlEncode(s)
 
+    let loginPage (error: string option) =
+        let errorHtml =
+            match error with
+            | Some msg -> $"""<p style="color:var(--pico-color-red-500);text-align:center">{htmlEncode msg}</p>"""
+            | None -> ""
+
+        $"""<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - Church Attendance</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/app.css?v=6">
+</head>
+<body>
+    <main class="container" style="max-width:400px;margin-top:10vh">
+        <article>
+            <header><h3 style="text-align:center">Church Attendance</h3></header>
+            {errorHtml}
+            <form method="post" action="/login">
+                <label for="password">Password
+                    <input type="password" id="password" name="password" required autofocus>
+                </label>
+                <button type="submit">Login</button>
+            </form>
+        </article>
+    </main>
+</body>
+</html>"""
+
     let layout (title: string) (activeNav: string) (content: string) =
         $"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -28,6 +59,7 @@ module Templates =
             <li><a href="/members" class="{if activeNav = "members" then "active" else ""}">Members</a></li>
             <li><a href="/attendance" class="{if activeNav = "attendance" then "active" else ""}">Attendance</a></li>
             <li><a href="/reports" class="{if activeNav = "reports" then "active" else ""}">Reports</a></li>
+            <li><form method="post" action="/logout" style="margin:0"><button type="submit" class="outline secondary" style="padding:0.3rem 0.6rem;font-size:0.85rem">Logout</button></form></li>
         </ul>
     </nav>
     <main class="container">
