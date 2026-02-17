@@ -1,23 +1,73 @@
 // Theme toggle
-function updateThemeIcon() {
-    var btn = document.getElementById('theme-toggle');
-    if (!btn) return;
+function updateThemeLabel() {
     var theme = document.documentElement.getAttribute('data-theme') || 'light';
-    btn.textContent = theme === 'dark' ? '\u2600' : '\u263E';
+    // More menu label
+    var label = document.getElementById('more-theme-label');
+    var icon = document.getElementById('more-theme-icon');
+    if (label) label.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+    if (icon) icon.textContent = theme === 'dark' ? '\u2600' : '\u263D';
+    // Login page text toggle
+    var loginToggle = document.getElementById('theme-toggle');
+    if (loginToggle) loginToggle.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
 }
 
+function toggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme') || 'light';
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeLabel();
+}
+
+// Login page theme toggle click
 document.addEventListener('click', function(e) {
     if (e.target && (e.target.id === 'theme-toggle' || e.target.closest('#theme-toggle'))) {
-        var current = document.documentElement.getAttribute('data-theme') || 'light';
-        var next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateThemeIcon();
+        e.preventDefault();
+        toggleTheme();
     }
 });
 
-// Set icon on load
-updateThemeIcon();
+// Set labels on load
+updateThemeLabel();
+
+// More menu toggle (shared between desktop nav "More" and mobile tab bar "More")
+document.addEventListener('click', function(e) {
+    var moreTrigger = e.target.closest('#more-tab') || e.target.closest('#desktop-more');
+    var moreMenu = document.getElementById('more-menu');
+    if (!moreMenu) return;
+
+    // Toggle menu
+    if (moreTrigger) {
+        e.preventDefault();
+        var isOpen = moreMenu.style.display === 'block';
+        moreMenu.style.display = isOpen ? 'none' : 'block';
+        return;
+    }
+
+    // Theme toggle from More menu
+    if (e.target.closest('#more-theme-toggle')) {
+        toggleTheme();
+        moreMenu.style.display = 'none';
+        return;
+    }
+
+    // Logout via POST
+    var logoutLink = e.target.closest('[data-logout]');
+    if (logoutLink) {
+        e.preventDefault();
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/logout';
+        document.body.appendChild(form);
+        form.submit();
+        return;
+    }
+
+    // Close menu when tapping outside
+    if (!e.target.closest('.more-menu')) {
+        moreMenu.style.display = 'none';
+    }
+});
 
 // Custom Modal Functions
 function openModal() {

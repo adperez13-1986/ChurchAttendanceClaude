@@ -24,11 +24,11 @@ module Templates =
     <title>Login - Church Attendance</title>
     {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/app.css?v=7">
+    <link rel="stylesheet" href="/css/app.css?v=15">
 </head>
 <body>
     <div style="position:absolute;top:1rem;right:1rem">
-        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">&#9790;</button>
+        <a href="#" class="theme-toggle-text" id="theme-toggle" aria-label="Toggle dark mode">Dark Mode</a>
     </div>
     <main class="container" style="max-width:400px;margin-top:10vh">
         <article>
@@ -42,11 +42,12 @@ module Templates =
             </form>
         </article>
     </main>
-    <script src="/js/app.js"></script>
+    <script src="/js/app.js?v=15"></script>
 </body>
 </html>"""
 
     let layout (title: string) (activeNav: string) (content: string) =
+        let tabClass tab = if activeNav = tab then "tab-active" else ""
         $"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,7 +56,7 @@ module Templates =
     <title>{htmlEncode title} - Church Attendance</title>
     {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/app.css?v=7">
+    <link rel="stylesheet" href="/css/app.css?v=15">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
@@ -64,18 +65,34 @@ module Templates =
             <li><strong>Church Attendance</strong></li>
         </ul>
         <ul>
-            <li><a href="/" class="{if activeNav = "home" then "active" else ""}">Dashboard</a></li>
-            <li><a href="/members" class="{if activeNav = "members" then "active" else ""}">Members</a></li>
-            <li><a href="/attendance" class="{if activeNav = "attendance" then "active" else ""}">Attendance</a></li>
-            <li><a href="/reports" class="{if activeNav = "reports" then "active" else ""}">Reports</a></li>
-            <li><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">&#9790;</button></li>
-            <li><form method="post" action="/logout" style="margin:0"><button type="submit" class="outline secondary" style="padding:0.3rem 0.6rem;font-size:0.85rem">Logout</button></form></li>
+            <li class="nav-link"><a href="/" class="{if activeNav = "home" then "active" else ""}">Dashboard</a></li>
+            <li class="nav-link"><a href="/members" class="{if activeNav = "members" then "active" else ""}">Members</a></li>
+            <li class="nav-link"><a href="/attendance" class="{if activeNav = "attendance" then "active" else ""}">Attendance</a></li>
+            <li class="nav-link"><a href="/reports" class="{if activeNav = "reports" then "active" else ""}">Reports</a></li>
+            <li class="nav-link"><a href="#" id="desktop-more">More</a></li>
         </ul>
     </nav>
     <main class="container">
         {content}
     </main>
-    <script src="/js/app.js"></script>
+    <div id="more-menu" class="more-menu" style="display:none">
+        <div class="more-menu-item" id="more-theme-toggle">
+            <span class="more-menu-icon" id="more-theme-icon">&#9789;</span>
+            <span id="more-theme-label">Dark Mode</span>
+        </div>
+        <a href="/logout" class="more-menu-item" data-logout="true">
+            <span class="more-menu-icon">&#10132;</span>
+            <span>Logout</span>
+        </a>
+    </div>
+    <nav class="bottom-tab-bar">
+        <a href="/" class="{tabClass "home"}"><span class="tab-icon">&#8962;</span><span class="tab-label">Dashboard</span></a>
+        <a href="/members" class="{tabClass "members"}"><span class="tab-icon">&#128101;</span><span class="tab-label">Members</span></a>
+        <a href="/attendance" class="{tabClass "attendance"}"><span class="tab-icon">&#10003;</span><span class="tab-label">Attendance</span></a>
+        <a href="/reports" class="{tabClass "reports"}"><span class="tab-icon">&#128202;</span><span class="tab-label">Reports</span></a>
+        <a href="#" id="more-tab" class="{tabClass "more"}"><span class="tab-icon">&#8942;</span><span class="tab-label">More</span></a>
+    </nav>
+    <script src="/js/app.js?v=15"></script>
 </body>
 </html>"""
 
@@ -246,7 +263,7 @@ module Templates =
 
         let deactivateBtn =
             if m.IsActive then
-                $"""<button class="outline secondary small" hx-delete="/members/{m.Id}" hx-target="#members-sections" hx-swap="outerHTML" hx-confirm="Deactivate {htmlEncode m.FullName}?">Deactivate</button>"""
+                $"""<button class="outline secondary icon-btn" title="Deactivate" hx-delete="/members/{m.Id}" hx-target="#members-sections" hx-swap="outerHTML" hx-confirm="Deactivate {htmlEncode m.FullName}?">&#10005;</button>"""
             else
                 ""
 
@@ -257,10 +274,10 @@ module Templates =
     <td>{htmlEncode m.FullName}</td>
     <td>{Domain.categoryLabel m.Category}</td>
     <td>{statusText}</td>
-    <td>
-        <button class="outline small" hx-get="/members/{m.Id}/edit" hx-target="#member-form-area" hx-swap="innerHTML" onclick="openModal();document.getElementById('modal-title').textContent='Edit Member'">Edit</button>
+    <td><div class="action-btns">
+        <button class="outline icon-btn" title="Edit" hx-get="/members/{m.Id}/edit" hx-target="#member-form-area" hx-swap="innerHTML" onclick="openModal();document.getElementById('modal-title').textContent='Edit Member'">&#9998;</button>
         {deactivateBtn}
-    </td>
+    </div></td>
 </tr>"""
 
     let private renderMemberSection (label: string) (count: int) (rows: string) =
@@ -306,7 +323,10 @@ module Templates =
 
     let membersPage (members: ChurchAttendance.Member list) =
         let content =
-            $"""<h1>Members</h1>
+            $"""<div class="page-header">
+    <h1>Members</h1>
+    <button hx-get="/members/new" hx-target="#member-form-area" hx-swap="innerHTML" onclick="openModal();document.getElementById('modal-title').textContent='Add New Member'">+ Add Member</button>
+</div>
 <div class="modal-overlay" id="member-modal-overlay" style="display: none;" onclick="if(event.target === this) closeModal()">
     <div class="modal-content">
         <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -314,13 +334,7 @@ module Templates =
         <div id="member-form-area"></div>
     </div>
 </div>
-<div class="grid">
-    <div></div>
-    <button hx-get="/members/new" hx-target="#member-form-area" hx-swap="innerHTML" onclick="openModal();document.getElementById('modal-title').textContent='Add New Member'">Add New Member</button>
-</div>
-<label for="member-name-filter">Search by Name
-    <input type="search" id="member-name-filter" placeholder="Type a name...">
-</label>
+<input type="search" id="member-name-filter" placeholder="Search members...">
 {membersTable members}"""
 
         layout "Members" "members" content
