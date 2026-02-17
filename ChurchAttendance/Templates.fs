@@ -24,7 +24,7 @@ module Templates =
     <title>Login - Church Attendance</title>
     {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/app.css?v=15">
+    <link rel="stylesheet" href="/css/app.css?v=16">
 </head>
 <body>
     <div style="position:absolute;top:1rem;right:1rem">
@@ -56,7 +56,7 @@ module Templates =
     <title>{htmlEncode title} - Church Attendance</title>
     {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/app.css?v=15">
+    <link rel="stylesheet" href="/css/app.css?v=16">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
@@ -110,12 +110,14 @@ module Templates =
                 $"""<article class="stat-purple">
         <header>Last Service</header>
         <p class="stat">{count}</p>
+        <small class="stat-label">Last Service</small>
         <small>{htmlEncode label} &middot; {htmlEncode dateStr}</small>
     </article>"""
             | None ->
                 """<article class="stat-purple">
         <header>Last Service</header>
         <p class="stat">&mdash;</p>
+        <small class="stat-label">Last Service</small>
         <small>No services yet</small>
     </article>"""
 
@@ -138,18 +140,21 @@ module Templates =
 
         let content =
             $"""<h1>Dashboard</h1>
-<div class="grid">
+<div class="stat-grid">
     <article class="stat-blue">
         <header>Total Members</header>
         <p class="stat">{memberCount}</p>
+        <small class="stat-label">Total Members</small>
     </article>
     <article class="stat-green">
         <header>Active Members</header>
         <p class="stat">{activeCount}</p>
+        <small class="stat-label">Active Members</small>
     </article>
     <article class="stat-amber">
         <header>Today's Attendance</header>
         <p class="stat">{todayAttendance}</p>
+        <small class="stat-label">Today's Attendance</small>
     </article>
     {lastServiceCard}
 </div>
