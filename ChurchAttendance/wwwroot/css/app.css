@@ -5,6 +5,12 @@
     margin: 0;
 }
 
+/* Dashboard stat card accents */
+article.stat-blue { border-left: 4px solid #3b82f6; }
+article.stat-green { border-left: 4px solid #22c55e; }
+article.stat-amber { border-left: 4px solid #f59e0b; }
+article.stat-purple { border-left: 4px solid #8b5cf6; }
+
 nav a.active {
     font-weight: bold;
     text-decoration: underline;

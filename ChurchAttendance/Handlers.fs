@@ -58,15 +58,32 @@ module Handlers =
         let members = Database.getMembers ()
         let activeCount = members |> List.filter (fun m -> m.IsActive) |> List.length
         let today = DateTime.Today
+        let allAttendance = Database.getAttendance ()
 
         let todayAttendance =
-            Database.getAttendance ()
+            allAttendance
             |> List.filter (fun r -> r.Date.Date = today)
             |> List.collect (fun r -> r.MemberIds)
             |> List.distinct
             |> List.length
 
-        let html = Templates.homePage members.Length activeCount todayAttendance
+        let recentRecords =
+            allAttendance
+            |> List.sortByDescending (fun r -> r.Date)
+            |> List.truncate 5
+
+        let lastService =
+            recentRecords
+            |> List.tryHead
+            |> Option.map (fun r ->
+                r.MemberIds.Length, r.Date, Domain.serviceTypeLabel r.ServiceType)
+
+        let recentActivity =
+            recentRecords
+            |> List.map (fun r ->
+                r.Date, Domain.serviceTypeLabel r.ServiceType, r.MemberIds.Length)
+
+        let html = Templates.homePage members.Length activeCount todayAttendance lastService recentActivity
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)
 

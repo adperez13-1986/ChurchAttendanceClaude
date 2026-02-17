@@ -69,23 +69,71 @@ module Templates =
 </body>
 </html>"""
 
-    let homePage (memberCount: int) (activeCount: int) (todayAttendance: int) =
+    let homePage
+        (memberCount: int)
+        (activeCount: int)
+        (todayAttendance: int)
+        (lastService: (int * DateTime * string) option)
+        (recentActivity: (DateTime * string * int) list)
+        =
+        let lastServiceCard =
+            match lastService with
+            | Some (count, date, label) ->
+                let dateStr = date.ToString("MMM d")
+                $"""<article class="stat-purple">
+        <header>Last Service</header>
+        <p class="stat">{count}</p>
+        <small>{htmlEncode label} &middot; {htmlEncode dateStr}</small>
+    </article>"""
+            | None ->
+                """<article class="stat-purple">
+        <header>Last Service</header>
+        <p class="stat">&mdash;</p>
+        <small>No services yet</small>
+    </article>"""
+
+        let recentRows =
+            if recentActivity.IsEmpty then
+                """<p style="color:var(--pico-muted-color)">No attendance records yet</p>"""
+            else
+                let rows =
+                    recentActivity
+                    |> List.map (fun (date, label, count) ->
+                        let dayName = date.ToString("ddd")
+                        let dateStr = date.ToString("MMM d")
+                        $"""<tr><td>{htmlEncode dayName}, {htmlEncode dateStr}</td><td>{htmlEncode label}</td><td><strong>{count}</strong></td></tr>""")
+                    |> String.concat "\n"
+
+                $"""<table role="grid">
+    <thead><tr><th>Date</th><th>Service</th><th>Present</th></tr></thead>
+    <tbody>{rows}</tbody>
+</table>"""
+
         let content =
             $"""<h1>Dashboard</h1>
 <div class="grid">
-    <article>
+    <article class="stat-blue">
         <header>Total Members</header>
         <p class="stat">{memberCount}</p>
     </article>
-    <article>
+    <article class="stat-green">
         <header>Active Members</header>
         <p class="stat">{activeCount}</p>
     </article>
-    <article>
+    <article class="stat-amber">
         <header>Today's Attendance</header>
         <p class="stat">{todayAttendance}</p>
     </article>
-</div>"""
+    {lastServiceCard}
+</div>
+<div class="grid" style="margin-bottom:1.5rem">
+    <a href="/attendance" role="button">Take Today's Attendance</a>
+    <a href="/reports" role="button" class="secondary">View Reports</a>
+</div>
+<article>
+    <header><h3 style="margin:0">Recent Activity</h3></header>
+    {recentRows}
+</article>"""
 
         layout "Dashboard" "home" content
 
