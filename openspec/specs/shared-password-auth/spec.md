@@ -24,16 +24,20 @@ The system SHALL display a login page at `GET /login` with a single password fie
 - **WHEN** a user submits an incorrect password via `POST /login`
 - **THEN** the system re-displays the login page with an error message "Invalid password"
 
-### Requirement: Password is configured via environment variable
-The system SHALL read the shared password from the `APP_PASSWORD` environment variable. If the variable is not set, the system SHALL fall back to `"changeme"`.
+### Requirement: Password is configured via tenant config
+The system SHALL read the shared password for each tenant from `~/.church-attendance/tenants.json` instead of the `APP_PASSWORD` environment variable. Each tenant has its own password.
 
-#### Scenario: Environment variable is set
-- **WHEN** `APP_PASSWORD` is set to `"mySecurePass123"`
-- **THEN** the system accepts `"mySecurePass123"` as the valid password
+#### Scenario: Tenant password is configured
+- **WHEN** tenant `vienna` has password `"secretVienna"` in `tenants.json`
+- **THEN** the system SHALL accept `"secretVienna"` as the valid password when logging into `vienna.jilaustria.org`
 
-#### Scenario: Environment variable is not set
-- **WHEN** `APP_PASSWORD` is not set
-- **THEN** the system accepts `"changeme"` as the valid password and logs a warning at startup
+#### Scenario: Different tenants have different passwords
+- **WHEN** tenant `vienna` has password `"secretVienna"` and tenant `donaustadt` has password `"secretDonau"`
+- **THEN** submitting `"secretVienna"` on `donaustadt.jilaustria.org` SHALL be rejected
+
+#### Scenario: Fallback when no tenants.json exists
+- **WHEN** `tenants.json` does not exist (auto-created with defaults)
+- **THEN** the system SHALL accept the password from `APP_PASSWORD` env var or `"changeme"` as fallback
 
 ### Requirement: Logout clears the session
 The system SHALL provide a logout mechanism at `POST /logout` that clears the authentication cookie and redirects to `/login`.

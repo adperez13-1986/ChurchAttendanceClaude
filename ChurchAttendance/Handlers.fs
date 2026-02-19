@@ -21,19 +21,36 @@ module Handlers =
         | true, values -> values |> Seq.toList
         | _ -> []
 
+    let getTenant (ctx: HttpContext) : string =
+        ctx.Items["Tenant"] :?> string
+
+    let private getChurchName (ctx: HttpContext) : string =
+        let tenant = getTenant ctx
+        match Database.tenantConfig.Tenants |> Map.tryFind tenant with
+        | Some tc -> tc.Name
+        | None -> "Church Attendance"
+
     // GET /login
     let loginPage (ctx: HttpContext) =
-        let html = Templates.loginPage None
+        let churchName = getChurchName ctx
+        let html = Templates.loginPage churchName None
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)
 
     // POST /login
-    let loginPost (ctx: HttpContext) (appPassword: string) =
+    let loginPost (ctx: HttpContext) =
         task {
             let! _ = ctx.Request.ReadFormAsync()
             let password = formValue ctx "password" |> Option.defaultValue ""
+            let tenant = getTenant ctx
+            let churchName = getChurchName ctx
 
-            if password = appPassword then
+            let tenantPassword =
+                match Database.tenantConfig.Tenants |> Map.tryFind tenant with
+                | Some tc -> tc.Password
+                | None -> "changeme"
+
+            if password = tenantPassword then
                 let claims = [| Claim(ClaimTypes.Name, "user") |]
                 let identity = ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)
                 let principal = ClaimsPrincipal(identity)
@@ -41,7 +58,7 @@ module Handlers =
                 do! ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, props)
                 ctx.Response.Redirect("/")
             else
-                let html = Templates.loginPage (Some "Invalid password")
+                let html = Templates.loginPage churchName (Some "Invalid password")
                 ctx.Response.ContentType <- "text/html; charset=utf-8"
                 do! ctx.Response.WriteAsync(html)
         }
@@ -55,10 +72,12 @@ module Handlers =
 
     // GET /
     let dashboard (ctx: HttpContext) =
-        let members = Database.getMembers ()
+        let tenant = getTenant ctx
+        let churchName = getChurchName ctx
+        let members = Database.getMembers tenant
         let activeCount = members |> List.filter (fun m -> m.IsActive) |> List.length
         let today = DateTime.Today
-        let allAttendance = Database.getAttendance ()
+        let allAttendance = Database.getAttendance tenant
 
         let todayAttendance =
             allAttendance
@@ -83,14 +102,16 @@ module Handlers =
             |> List.map (fun r ->
                 r.Date, Domain.serviceTypeLabel r.ServiceType, r.MemberIds.Length)
 
-        let html = Templates.homePage members.Length activeCount todayAttendance lastService recentActivity
+        let html = Templates.homePage churchName members.Length activeCount todayAttendance lastService recentActivity
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)
 
     // GET /members
     let membersPage (ctx: HttpContext) =
-        let members = Database.getMembers ()
-        let html = Templates.membersPage members
+        let tenant = getTenant ctx
+        let churchName = getChurchName ctx
+        let members = Database.getMembers tenant
+        let html = Templates.membersPage churchName members
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)
 
@@ -103,6 +124,7 @@ module Handlers =
     // POST /members
     let createMember (ctx: HttpContext) =
         task {
+            let tenant = getTenant ctx
             let! _ = ctx.Request.ReadFormAsync()
             let name = formValue ctx "fullName" |> Option.defaultValue ""
             let ageGroupStr = formValue ctx "ageGroup" |> Option.defaultValue "Men"
@@ -126,10 +148,10 @@ module Handlers =
                         | _ -> None)
 
             let m = Domain.newMember name ageGroup category firstAttendedDate
-            Database.addMember m
+            Database.addMember tenant m
 
             if isHtmx ctx then
-                let members = Database.getMembers()
+                let members = Database.getMembers tenant
                 let html = Templates.membersTable members
 
                 ctx.Response.ContentType <- "text/html; charset=utf-8"
@@ -141,9 +163,10 @@ module Handlers =
 
     // GET /members/{id}/edit
     let editMemberForm (ctx: HttpContext) (id: string) =
+        let tenant = getTenant ctx
         match Guid.TryParse(id) with
         | true, guid ->
-            let m = Database.getMember guid
+            let m = Database.getMember tenant guid
             let html = Templates.memberForm m
             ctx.Response.ContentType <- "text/html; charset=utf-8"
             ctx.Response.WriteAsync(html)
@@ -154,11 +177,12 @@ module Handlers =
     // PUT /members/{id}
     let updateMember (ctx: HttpContext) (id: string) =
         task {
+            let tenant = getTenant ctx
             let! _ = ctx.Request.ReadFormAsync()
 
             match Guid.TryParse(id) with
             | true, guid ->
-                match Database.getMember guid with
+                match Database.getMember tenant guid with
                 | Some existing ->
                     let name = formValue ctx "fullName" |> Option.defaultValue existing.FullName
 
@@ -191,9 +215,9 @@ module Handlers =
                             Category = category
                             FirstAttendedDate = firstAttendedDate }
 
-                    Database.updateMember updated
+                    Database.updateMember tenant updated
 
-                    let members = Database.getMembers()
+                    let members = Database.getMembers tenant
                     let html = Templates.membersTable members
 
                     ctx.Response.ContentType <- "text/html; charset=utf-8"
@@ -208,10 +232,11 @@ module Handlers =
 
     // DELETE /members/{id}
     let deactivateMember (ctx: HttpContext) (id: string) =
+        let tenant = getTenant ctx
         match Guid.TryParse(id) with
         | true, guid ->
-            Database.deactivateMember guid
-            let members = Database.getMembers ()
+            Database.deactivateMember tenant guid
+            let members = Database.getMembers tenant
             let html = Templates.membersTable members
             ctx.Response.ContentType <- "text/html; charset=utf-8"
             ctx.Response.WriteAsync(html)
@@ -221,12 +246,13 @@ module Handlers =
 
     // GET /attendance
     let attendancePage (ctx: HttpContext) =
+        let churchName = getChurchName ctx
         let dateParam =
             if ctx.Request.Query.ContainsKey("date") then
                 Some (ctx.Request.Query.["date"].ToString())
             else
                 None
-        let html = Templates.attendancePage dateParam
+        let html = Templates.attendancePage churchName dateParam
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)
 
@@ -239,6 +265,7 @@ module Handlers =
 
     // GET /attendance/list
     let attendanceList (ctx: HttpContext) =
+        let tenant = getTenant ctx
         let dateStr =
             ctx.Request.Query.["date"].ToString()
 
@@ -252,12 +279,12 @@ module Handlers =
             match DateTime.TryParse(dateStr) with
             | true, date when System.String.IsNullOrEmpty(serviceTypeStr) -> inferServiceType date
             | _ -> parseServiceType serviceTypeStr
-        let members = Database.getMembers ()
+        let members = Database.getMembers tenant
 
         let checkedIds =
             match DateTime.TryParse(dateStr) with
             | true, date ->
-                match Database.getAttendanceForDate date serviceType with
+                match Database.getAttendanceForDate tenant date serviceType with
                 | Some record -> record.MemberIds |> Set.ofList
                 | None -> Set.empty
             | _ -> Set.empty
@@ -276,7 +303,7 @@ module Handlers =
 
         let firstTimerIds =
             match DateTime.TryParse(dateStr) with
-            | true, date -> Database.getFirstTimerIds date
+            | true, date -> Database.getFirstTimerIds tenant date
             | _ -> Set.empty
 
         let html =
@@ -288,6 +315,7 @@ module Handlers =
     // POST /attendance/toggle
     let toggleAttendance (ctx: HttpContext) =
         task {
+            let tenant = getTenant ctx
             let! _ = ctx.Request.ReadFormAsync()
             let dateStr = formValue ctx "date" |> Option.defaultValue ""
             let serviceTypeStr = formValue ctx "serviceType" |> Option.defaultValue "SundayService"
@@ -298,7 +326,7 @@ module Handlers =
 
             match DateTime.TryParse(dateStr), Guid.TryParse(memberIdStr) with
             | (true, date), (true, memberId) ->
-                let count = Database.toggleAttendanceMember date serviceType memberId isChecked
+                let count = Database.toggleAttendanceMember tenant date serviceType memberId isChecked
                 ctx.Response.ContentType <- "text/html; charset=utf-8"
                 return! ctx.Response.WriteAsync($"""<span class="status-msg success" style="padding:0.3rem 0.6rem;font-size:0.85rem">Saved ({count} present)</span>""")
             | _ ->
@@ -309,6 +337,7 @@ module Handlers =
     // POST /attendance
     let saveAttendance (ctx: HttpContext) =
         task {
+            let tenant = getTenant ctx
             let! _ = ctx.Request.ReadFormAsync()
             let dateStr = formValue ctx "date" |> Option.defaultValue ""
             let serviceTypeStr = formValue ctx "serviceType" |> Option.defaultValue "SundayService"
@@ -330,9 +359,9 @@ module Handlers =
                       ServiceType = serviceType
                       MemberIds = memberIds }
 
-                Database.saveAttendanceRecord record
+                Database.saveAttendanceRecord tenant record
 
-                let members = Database.getMembers ()
+                let members = Database.getMembers tenant
                 let memberMap = members |> List.map (fun m -> m.Id, m) |> Map.ofList
 
                 let attendees =
@@ -354,7 +383,7 @@ module Handlers =
                         |> List.filter (fun m -> m.Category = c)
                         |> List.length)
 
-                let firstTimerIds = Database.getFirstTimerIds date
+                let firstTimerIds = Database.getFirstTimerIds tenant date
 
                 let firstTimers =
                     attendees
@@ -375,22 +404,23 @@ module Handlers =
 
     // GET /reports
     let reportsPage (ctx: HttpContext) =
-        let html = Templates.reportsPage ()
+        let churchName = getChurchName ctx
+        let html = Templates.reportsPage churchName
         ctx.Response.ContentType <- "text/html; charset=utf-8"
         ctx.Response.WriteAsync(html)
 
     // POST /attendance/export-pdf
     let exportAttendancePdf (ctx: HttpContext) =
         task {
+            let tenant = getTenant ctx
             let! _ = ctx.Request.ReadFormAsync()
             let dateStr = formValue ctx "date" |> Option.defaultValue ""
             let serviceTypeStr = formValue ctx "serviceType" |> Option.defaultValue "SundayService"
 
             match DateTime.TryParse(dateStr) with
             | true, date ->
-                let records = Database.getAttendance ()
-                let members = Database.getMembers ()
-                // Generate PDF for single date (start and end are the same)
+                let records = Database.getAttendance tenant
+                let members = Database.getMembers tenant
                 let pdfBytes = PdfService.generateReport date date records members
 
                 let serviceType = parseServiceType serviceTypeStr
@@ -410,14 +440,15 @@ module Handlers =
     // POST /reports/export
     let exportPdf (ctx: HttpContext) =
         task {
+            let tenant = getTenant ctx
             let! _ = ctx.Request.ReadFormAsync()
             let startStr = formValue ctx "startDate" |> Option.defaultValue ""
             let endStr = formValue ctx "endDate" |> Option.defaultValue ""
 
             match DateTime.TryParse(startStr), DateTime.TryParse(endStr) with
             | (true, startDate), (true, endDate) ->
-                let records = Database.getAttendance ()
-                let members = Database.getMembers ()
+                let records = Database.getAttendance tenant
+                let members = Database.getMembers tenant
                 let pdfBytes = PdfService.generateReport startDate endDate records members
 
                 let fileName =
@@ -430,4 +461,3 @@ module Handlers =
                 ctx.Response.ContentType <- "text/html; charset=utf-8"
                 return! ctx.Response.WriteAsync(Templates.statusMessage "Invalid date range" true)
         }
-

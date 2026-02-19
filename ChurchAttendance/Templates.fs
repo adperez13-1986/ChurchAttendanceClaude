@@ -10,7 +10,7 @@ module Templates =
     let private themeScript =
         """<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light')</script>"""
 
-    let loginPage (error: string option) =
+    let loginPage (churchName: string) (error: string option) =
         let errorHtml =
             match error with
             | Some msg -> $"""<p class="status-msg error" style="text-align:center">{htmlEncode msg}</p>"""
@@ -21,7 +21,7 @@ module Templates =
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - Church Attendance</title>
+    <title>Login - {htmlEncode churchName}</title>
     {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/css/app.css?v=16">
@@ -32,7 +32,7 @@ module Templates =
     </div>
     <main class="container" style="max-width:400px;margin-top:10vh">
         <article>
-            <header><h3 style="text-align:center">Church Attendance</h3></header>
+            <header><h3 style="text-align:center">{htmlEncode churchName}</h3></header>
             {errorHtml}
             <form method="post" action="/login">
                 <label for="password">Password
@@ -46,14 +46,14 @@ module Templates =
 </body>
 </html>"""
 
-    let layout (title: string) (activeNav: string) (content: string) =
+    let layout (churchName: string) (title: string) (activeNav: string) (content: string) =
         let tabClass tab = if activeNav = tab then "tab-active" else ""
         $"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{htmlEncode title} - Church Attendance</title>
+    <title>{htmlEncode title} - {htmlEncode churchName}</title>
     {themeScript}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/css/app.css?v=16">
@@ -62,7 +62,7 @@ module Templates =
 <body>
     <nav class="container">
         <ul>
-            <li><strong>Church Attendance</strong></li>
+            <li><strong>{htmlEncode churchName}</strong></li>
         </ul>
         <ul>
             <li class="nav-link"><a href="/" class="{if activeNav = "home" then "active" else ""}">Dashboard</a></li>
@@ -97,6 +97,7 @@ module Templates =
 </html>"""
 
     let homePage
+        (churchName: string)
         (memberCount: int)
         (activeCount: int)
         (todayAttendance: int)
@@ -167,7 +168,7 @@ module Templates =
     {recentRows}
 </article>"""
 
-        layout "Dashboard" "home" content
+        layout churchName "Dashboard" "home" content
 
     let private ageGroupOptions (selected: string) =
         Domain.allAgeGroups
@@ -326,7 +327,7 @@ module Templates =
 {sections}
 </div>"""
 
-    let membersPage (members: ChurchAttendance.Member list) =
+    let membersPage (churchName: string) (members: ChurchAttendance.Member list) =
         let content =
             $"""<div class="page-header">
     <h1>Members</h1>
@@ -342,9 +343,9 @@ module Templates =
 <input type="search" id="member-name-filter" placeholder="Search members...">
 {membersTable members}"""
 
-        layout "Members" "members" content
+        layout churchName "Members" "members" content
 
-    let attendancePage (initialDate: string option) =
+    let attendancePage (churchName: string) (initialDate: string option) =
         // Default to today or use provided date
         let today = DateTime.Today
         let todayStr = today.ToString("yyyy-MM-dd")
@@ -360,7 +361,7 @@ module Templates =
 </form>
 <div id="attendance-area"></div>"""
 
-        layout "Attendance" "attendance" content
+        layout churchName "Attendance" "attendance" content
 
     let attendanceChecklist
         (members: ChurchAttendance.Member list)
@@ -523,7 +524,7 @@ module Templates =
 </article>
 {statusMessage "Attendance saved successfully!" false}"""
 
-    let reportsPage () =
+    let reportsPage (churchName: string) =
         let today = DateTime.Today.ToString("yyyy-MM-dd")
         let weekAgo = DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd")
 
@@ -550,5 +551,38 @@ module Templates =
     <div id="report-status"></div>
 </article>"""
 
-        layout "Reports" "reports" content
+        layout churchName "Reports" "reports" content
+
+    let landingPage (domain: string) (tenants: (string * string) list) =
+        let tenantLinks =
+            tenants
+            |> List.map (fun (slug, name) ->
+                let url = $"https://{slug}.{domain}"
+                $"""<a href="{htmlEncode url}" role="button" class="outline" style="display:block;margin-bottom:0.5rem">{htmlEncode name}</a>""")
+            |> String.concat "\n"
+
+        $"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Church Attendance</title>
+    {themeScript}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/app.css?v=16">
+</head>
+<body>
+    <div style="position:absolute;top:1rem;right:1rem">
+        <a href="#" class="theme-toggle-text" id="theme-toggle" aria-label="Toggle dark mode">Dark Mode</a>
+    </div>
+    <main class="container" style="max-width:500px;margin-top:10vh">
+        <article>
+            <header><h3 style="text-align:center">Church Attendance</h3></header>
+            <p style="text-align:center">Select your church:</p>
+            {tenantLinks}
+        </article>
+    </main>
+    <script src="/js/app.js?v=15"></script>
+</body>
+</html>"""
 

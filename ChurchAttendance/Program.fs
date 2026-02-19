@@ -1,10 +1,8 @@
 open System
 open System.IO
-open System.Security.Claims
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Authentication
 open Microsoft.AspNetCore.Authentication.Cookies
-open Microsoft.AspNetCore.Authorization
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Http
 open Microsoft.AspNetCore.Hosting
@@ -18,13 +16,7 @@ open ChurchAttendance
 let main args =
     Database.ensureDataDir ()
 
-    // Read password from env var with fallback
-    let appPassword =
-        match Environment.GetEnvironmentVariable("APP_PASSWORD") with
-        | null | "" ->
-            printfn "WARNING: APP_PASSWORD not set — using default password. Set APP_PASSWORD environment variable for production."
-            "changeme"
-        | pwd -> pwd
+    let config = Database.tenantConfig
 
     let builder = WebApplication.CreateBuilder(args)
 
@@ -56,8 +48,38 @@ let main args =
 
     let app = builder.Build()
 
-    // Middleware order: static files (no auth) → authentication → authorization
+    // Middleware order: static files → tenant resolution → authentication → authorization
     app.UseStaticFiles() |> ignore
+
+    // Tenant resolution middleware
+    app.Use(fun (ctx: HttpContext) (next: RequestDelegate) ->
+        let host = ctx.Request.Host.Host
+        let configDomain = config.Domain
+
+        // Check if this is the bare domain (landing page)
+        if not (String.IsNullOrEmpty configDomain) && host = configDomain then
+            let tenantList =
+                config.Tenants
+                |> Map.toList
+                |> List.map (fun (slug, tc) -> (slug, tc.Name))
+            let html = Templates.landingPage configDomain tenantList
+            ctx.Response.ContentType <- "text/html; charset=utf-8"
+            ctx.Response.WriteAsync(html)
+        else
+            // Try to extract subdomain
+            let tenant =
+                if not (String.IsNullOrEmpty configDomain) && host.EndsWith("." + configDomain) then
+                    let subdomain = host.Substring(0, host.Length - configDomain.Length - 1)
+                    if config.Tenants.ContainsKey(subdomain) then subdomain
+                    else config.Default
+                else
+                    // localhost or unknown host — use default tenant
+                    config.Default
+
+            ctx.Items["Tenant"] <- tenant :> obj
+            next.Invoke(ctx)
+    ) |> ignore
+
     app.UseAuthentication() |> ignore
     app.UseAuthorization() |> ignore
 
@@ -84,7 +106,7 @@ let main args =
     // Login (no auth required)
     app.MapGet("/login", RequestDelegate(Handlers.loginPage))
         .AllowAnonymous() |> ignore
-    app.MapPost("/login", RequestDelegate(fun ctx -> Handlers.loginPost ctx appPassword))
+    app.MapPost("/login", RequestDelegate(fun ctx -> Handlers.loginPost ctx))
         .AllowAnonymous() |> ignore
 
     // Logout

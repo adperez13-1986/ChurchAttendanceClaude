@@ -39,6 +39,15 @@ type AttendanceRecord =
       ServiceType: ServiceType
       MemberIds: Guid list }
 
+type TenantConfig =
+    { Name: string
+      Password: string }
+
+type TenantsConfig =
+    { Default: string
+      Domain: string
+      Tenants: Map<string, TenantConfig> }
+
 module Domain =
 
     let ageGroupLabel =

@@ -7,44 +7,101 @@ open System.Text.Json.Serialization
 
 module Database =
 
-    let private dataDir =
+    let private baseDir =
         let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-        Path.Combine(home, ".church-attendance", "data")
+        Path.Combine(home, ".church-attendance")
 
-    let private membersFile = Path.Combine(dataDir, "members.json")
-    let private attendanceFile = Path.Combine(dataDir, "attendance.json")
-
+    let private tenantsFile = Path.Combine(baseDir, "tenants.json")
 
     let private lockObj = obj ()
 
     let private jsonOptions =
-        let opts = JsonSerializerOptions(WriteIndented = true)
+        let opts = JsonSerializerOptions(WriteIndented = true, PropertyNameCaseInsensitive = true)
         let unionEncoding = JsonUnionEncoding.UnwrapFieldlessTags ||| JsonUnionEncoding.Default
         opts.Converters.Add(JsonFSharpConverter(unionEncoding = unionEncoding))
         opts
 
+    let private dataDirFor (tenant: string) =
+        Path.Combine(baseDir, tenant)
+
+    let private membersFileFor (tenant: string) =
+        Path.Combine(dataDirFor tenant, "members.json")
+
+    let private attendanceFileFor (tenant: string) =
+        Path.Combine(dataDirFor tenant, "attendance.json")
+
+    // Tenant config loading
+    let loadTenantsConfig () : TenantsConfig =
+        if File.Exists tenantsFile then
+            let json = File.ReadAllText tenantsFile
+            JsonSerializer.Deserialize<TenantsConfig>(json, jsonOptions)
+        else
+            let defaultPassword =
+                match Environment.GetEnvironmentVariable("APP_PASSWORD") with
+                | null | "" ->
+                    printfn "WARNING: APP_PASSWORD not set — using default password. Set APP_PASSWORD environment variable or create tenants.json."
+                    "changeme"
+                | pwd -> pwd
+
+            let config =
+                { Default = "default"
+                  Domain = ""
+                  Tenants = Map.ofList [ "default", { Name = "Church Attendance"; Password = defaultPassword } ] }
+
+            if not (Directory.Exists baseDir) then
+                Directory.CreateDirectory baseDir |> ignore
+
+            let json = JsonSerializer.Serialize(config, jsonOptions)
+            File.WriteAllText(tenantsFile, json)
+            printfn "Created default tenants.json at %s" tenantsFile
+            config
+
+    let mutable tenantConfig = loadTenantsConfig ()
+
     let private oldDataDir =
-        Path.Combine(AppContext.BaseDirectory, "data")
+        Path.Combine(baseDir, "data")
 
     let ensureDataDir () =
-        if not (Directory.Exists dataDir) then
-            Directory.CreateDirectory dataDir |> ignore
+        // Create directories for all configured tenants
+        for kvp in tenantConfig.Tenants do
+            let dir = dataDirFor kvp.Key
+            if not (Directory.Exists dir) then
+                Directory.CreateDirectory dir |> ignore
 
-        // Migration hint: if old location has data but new location is empty
+        // Migration hint: if old ~/.church-attendance/data/ location has data
         let oldMembersFile = Path.Combine(oldDataDir, "members.json")
-        if File.Exists oldMembersFile && not (File.Exists membersFile) then
+        let anyTenantHasData =
+            tenantConfig.Tenants
+            |> Map.exists (fun slug _ -> File.Exists (membersFileFor slug))
+
+        if File.Exists oldMembersFile && not anyTenantHasData then
+            let defaultTenant = tenantConfig.Default
+            printfn ""
+            printfn "============================================================"
+            printfn " DATA MIGRATION NOTICE"
+            printfn "============================================================"
+            printfn " Data files found in the old location:"
+            printfn "   %s" oldDataDir
+            printfn ""
+            printfn " The app now stores data per-tenant. To migrate, run:"
+            printfn "   cp %s/* %s/" oldDataDir (dataDirFor defaultTenant)
+            printfn "============================================================"
+            printfn ""
+
+        // Also check AppContext.BaseDirectory/data/ (original old location)
+        let legacyDataDir = Path.Combine(AppContext.BaseDirectory, "data")
+        let legacyMembersFile = Path.Combine(legacyDataDir, "members.json")
+        if File.Exists legacyMembersFile && not anyTenantHasData && not (File.Exists oldMembersFile) then
+            let defaultTenant = tenantConfig.Default
             printfn ""
             printfn "============================================================"
             printfn " DATA MIGRATION NOTICE"
             printfn "============================================================"
             printfn " Data files found in the old location (build output):"
-            printfn "   %s" oldDataDir
+            printfn "   %s" legacyDataDir
             printfn ""
-            printfn " The app now stores data in:"
-            printfn "   %s" dataDir
-            printfn ""
-            printfn " To migrate your existing data, run:"
-            printfn "   cp %s/* %s/" oldDataDir dataDir
+            printfn " The app now stores data per-tenant. To migrate, run:"
+            printfn "   cp %s/* %s/" legacyDataDir (dataDirFor defaultTenant)
             printfn "============================================================"
             printfn ""
 
@@ -65,43 +122,45 @@ module Database =
             File.WriteAllText(path, json))
 
     // Members
-    let getMembers () : Member list = readFile membersFile []
+    let getMembers (tenant: string) : Member list =
+        readFile (membersFileFor tenant) []
 
-    let saveMembers (members: Member list) = writeFile membersFile members
+    let saveMembers (tenant: string) (members: Member list) =
+        writeFile (membersFileFor tenant) members
 
-    let getMember (id: Guid) =
-        getMembers () |> List.tryFind (fun m -> m.Id = id)
+    let getMember (tenant: string) (id: Guid) =
+        getMembers tenant |> List.tryFind (fun m -> m.Id = id)
 
-    let addMember (m: Member) =
-        let members = getMembers ()
-        saveMembers (members @ [ m ])
+    let addMember (tenant: string) (m: Member) =
+        let members = getMembers tenant
+        saveMembers tenant (members @ [ m ])
 
-    let updateMember (m: Member) =
+    let updateMember (tenant: string) (m: Member) =
         let members =
-            getMembers ()
+            getMembers tenant
             |> List.map (fun existing -> if existing.Id = m.Id then m else existing)
 
-        saveMembers members
+        saveMembers tenant members
 
-    let deactivateMember (id: Guid) =
-        match getMember id with
-        | Some m -> updateMember { m with IsActive = false }
+    let deactivateMember (tenant: string) (id: Guid) =
+        match getMember tenant id with
+        | Some m -> updateMember tenant { m with IsActive = false }
         | None -> ()
 
     // Attendance
-    let getAttendance () : AttendanceRecord list =
-        readFile attendanceFile []
+    let getAttendance (tenant: string) : AttendanceRecord list =
+        readFile (attendanceFileFor tenant) []
 
-    let saveAttendance (records: AttendanceRecord list) =
-        writeFile attendanceFile records
+    let saveAttendance (tenant: string) (records: AttendanceRecord list) =
+        writeFile (attendanceFileFor tenant) records
 
-    let getAttendanceForDate (date: DateTime) (serviceType: ServiceType) =
-        getAttendance ()
+    let getAttendanceForDate (tenant: string) (date: DateTime) (serviceType: ServiceType) =
+        getAttendance tenant
         |> List.tryFind (fun r -> r.Date.Date = date.Date && r.ServiceType = serviceType)
 
-    let saveAttendanceRecord (record: AttendanceRecord) =
+    let saveAttendanceRecord (tenant: string) (record: AttendanceRecord) =
         lock lockObj (fun () ->
-            let records: AttendanceRecord list = readFile attendanceFile []
+            let records: AttendanceRecord list = readFile (attendanceFileFor tenant) []
 
             let updated =
                 match
@@ -113,11 +172,11 @@ module Database =
                 | None -> records @ [ record ]
 
             let json = JsonSerializer.Serialize(updated, jsonOptions)
-            File.WriteAllText(attendanceFile, json))
+            File.WriteAllText(attendanceFileFor tenant, json))
 
-    let toggleAttendanceMember (date: DateTime) (serviceType: ServiceType) (memberId: Guid) (add: bool) : int =
+    let toggleAttendanceMember (tenant: string) (date: DateTime) (serviceType: ServiceType) (memberId: Guid) (add: bool) : int =
         lock lockObj (fun () ->
-            let records: AttendanceRecord list = readFile attendanceFile []
+            let records: AttendanceRecord list = readFile (attendanceFileFor tenant) []
 
             let idx =
                 records
@@ -150,17 +209,16 @@ module Database =
                 | None -> records @ [ updatedRecord ]
 
             let json = JsonSerializer.Serialize(updatedRecords, jsonOptions)
-            File.WriteAllText(attendanceFile, json)
+            File.WriteAllText(attendanceFileFor tenant, json)
 
             updatedIds.Length)
 
     /// Returns the set of member IDs whose FirstAttendedDate matches the given date.
-    let getFirstTimerIds (date: DateTime) : Set<Guid> =
-        getMembers ()
+    let getFirstTimerIds (tenant: string) (date: DateTime) : Set<Guid> =
+        getMembers tenant
         |> List.filter (fun m ->
             match m.FirstAttendedDate with
             | Some firstDate -> firstDate.Date = date.Date
             | None -> false)
         |> List.map (fun m -> m.Id)
         |> Set.ofList
-
